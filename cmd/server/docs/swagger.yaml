@@ -1,0 +1,114 @@
+basePath: /api/v1
+definitions:
+  gin-backend-app_internal_dto_common.ErrorResponse:
+    properties:
+      message:
+        example: Error message
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+  gin-backend-app_internal_dto_common.Response:
+    properties:
+      data: {}
+      message:
+        example: Operation successful
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  gin-backend-app_internal_dto_request.CreateUserRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      name:
+        example: john_doe
+        type: string
+      password:
+        example: MyPass123!
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  gin-backend-app_internal_dto_request.LoginUserRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      password:
+        example: MyPass123!
+        type: string
+    required:
+    - email
+    - password
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Backend API for Traspac Competition
+  title: Traspac Backend API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with email and password
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/gin-backend-app_internal_dto_request.LoginUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "401":
+          description: Invalid credentials
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      summary: User login
+      tags:
+      - Authentication
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account
+      parameters:
+      - description: User registration data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/gin-backend-app_internal_dto_request.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "400":
+          description: Invalid request data or user already exists
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      summary: Register new user
+      tags:
+      - Authentication
+swagger: "2.0"

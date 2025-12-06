@@ -1,0 +1,168 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Backend API for Traspac Competition",
+        "title": "Traspac Backend API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api/v1",
+    "paths": {
+        "/auth/login": {
+            "post": {
+                "description": "Authenticate user with email and password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "User login",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_request.LoginUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "User created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "description": "Create a new user account",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Register new user",
+                "parameters": [
+                    {
+                        "description": "User registration data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_request.CreateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "User created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request data or user already exists",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "gin-backend-app_internal_dto_common.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Error message"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "gin-backend-app_internal_dto_common.Response": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string",
+                    "example": "Operation successful"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "gin-backend-app_internal_dto_request.CreateUserRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "name",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "john@example.com"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "john_doe"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "MyPass123!"
+                }
+            }
+        },
+        "gin-backend-app_internal_dto_request.LoginUserRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "john@example.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "MyPass123!"
+                }
+            }
+        }
+    }
+}
