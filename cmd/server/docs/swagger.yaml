@@ -2,8 +2,11 @@ basePath: /api/v1
 definitions:
   gin-backend-app_internal_dto_common.ErrorResponse:
     properties:
+      error:
+        example: Detailed error message
+        type: string
       message:
-        example: Error message
+        example: Something went wrong
         type: string
       success:
         example: false
@@ -19,6 +22,19 @@ definitions:
         example: true
         type: boolean
     type: object
+  gin-backend-app_internal_dto_request.ChangePasswordRequest:
+    properties:
+      confirm_password:
+        example: MyNewSecurePass123!
+        type: string
+      new_password:
+        example: MyNewSecurePass123!
+        minLength: 8
+        type: string
+    required:
+    - confirm_password
+    - new_password
+    type: object
   gin-backend-app_internal_dto_request.CreateUserRequest:
     properties:
       email:
@@ -26,9 +42,11 @@ definitions:
         type: string
       name:
         example: john_doe
+        maxLength: 50
+        minLength: 3
         type: string
       password:
-        example: MyPass123!
+        example: MySecurePass123!
         minLength: 8
         type: string
     required:
@@ -42,24 +60,96 @@ definitions:
         example: john@example.com
         type: string
       password:
-        example: MyPass123!
+        example: MySecurePass123!
         type: string
     required:
     - email
     - password
     type: object
+  gin-backend-app_internal_dto_request.OtpVerificationRequest:
+    properties:
+      token_otp:
+        example: ABCD12
+        type: string
+    required:
+    - token_otp
+    type: object
+  gin-backend-app_internal_dto_request.RequestChangePasswordOtpRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+    required:
+    - email
+    type: object
+  gin-backend-app_internal_dto_request.VerifyOTPAndEmailRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      token_otp:
+        example: ABCD12
+        type: string
+    required:
+    - email
+    - token_otp
+    type: object
 host: localhost:8080
 info:
-  contact: {}
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
   description: Backend API for Traspac Competition
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
   title: Traspac Backend API
   version: "1.0"
 paths:
+  /auth/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Change user password using verification token obtained from OTP
+        verification
+      parameters:
+      - description: Verification token from OTP verification
+        in: query
+        name: token
+        required: true
+        type: string
+      - description: New password data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/gin-backend-app_internal_dto_request.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password changed successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "400":
+          description: Invalid request data or token
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "404":
+          description: Invalid or expired verification token
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      summary: Change password with verification token
+      tags:
+      - Password Reset
   /auth/login:
     post:
       consumes:
       - application/json
-      description: Authenticate user with email and password
+      description: Authenticate user with email and password. Returns JWT token on
+        successful authentication.
       parameters:
       - description: Login credentials
         in: body
@@ -70,8 +160,8 @@ paths:
       produces:
       - application/json
       responses:
-        "201":
-          description: User created successfully
+        "200":
+          description: Login successful
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
         "400":
@@ -89,7 +179,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new user account
+      description: Create a new user account with email verification. Returns JWT
+        token and sends verification email.
       parameters:
       - description: User registration data
         in: body
@@ -111,4 +202,170 @@ paths:
       summary: Register new user
       tags:
       - Authentication
+  /auth/request-change-password:
+    post:
+      consumes:
+      - application/json
+      description: Send OTP code to user's email for password reset. OTP expires in
+        24 hours.
+      parameters:
+      - description: Email address for password reset
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/gin-backend-app_internal_dto_request.RequestChangePasswordOtpRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password reset email sent successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "404":
+          description: Email not found
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      summary: Request password reset
+      tags:
+      - Password Reset
+  /auth/resend-verification:
+    post:
+      consumes:
+      - application/json
+      description: Resend 6-digit OTP verification code to user's email address. Rate
+        limited to once per minute to prevent spam. User must be authenticated to
+        use this endpoint.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Verification email sent successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "400":
+          description: Rate limit exceeded or email already verified
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "429":
+          description: Too many requests - rate limited
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Resend email verification code
+      tags:
+      - Email Verification
+  /auth/verification-status:
+    get:
+      consumes:
+      - application/json
+      description: Get the current email verification status for the authenticated
+        user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Verification status retrieved successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Check email verification status
+      tags:
+      - Email Verification
+  /auth/verify-email:
+    post:
+      consumes:
+      - application/json
+      description: Verify user's email address using 6-digit OTP code received via
+        email. User must be authenticated to use this endpoint.
+      parameters:
+      - description: OTP verification data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/gin-backend-app_internal_dto_request.OtpVerificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Email verified successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "400":
+          description: Invalid request data or OTP
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Verify email address with OTP
+      tags:
+      - Email Verification
+  /auth/verify-otp-password-change:
+    post:
+      consumes:
+      - application/json
+      description: Verify OTP code received via email and get verification token for
+        password reset
+      parameters:
+      - description: Email and OTP verification data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/gin-backend-app_internal_dto_request.VerifyOTPAndEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP verified successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "400":
+          description: Invalid request data or OTP
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "404":
+          description: Email not found or OTP expired
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      summary: Verify OTP and get verification token
+      tags:
+      - Password Reset
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

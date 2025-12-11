@@ -11,10 +11,12 @@ type UserToken struct {
 	ID        uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
 	UserID    uuid.UUID `json:"user_id" gorm:"type:uuid;not null;index"`
 
-	TokenHash string `json:"-" gorm:"type:char(64);uniqueIndex;not null"`
+	TokenOtp string `json:"token_otp" gorm:"type:char(64);uniqueIndex;not null"`
+
+	//works for reset password only
+	VerifyToken *string `json:"-" gorm:"type:char(64);uniqueIndex"`
 
 	TokenType TokenType `json:"token_type" gorm:"type:varchar(50);not null;index"`
-
 	ExpiresAt time.Time  `json:"expires_at" gorm:"not null"`
 	UsedAt    *time.Time `json:"used_at" gorm:""`
 

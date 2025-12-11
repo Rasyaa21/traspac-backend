@@ -2,24 +2,30 @@ package request
 
 // CreateUserRequest represents user registration request
 type CreateUserRequest struct {
-	Name     string `json:"name" validate:"required" example:"john_doe"`
-	Email    string `json:"email" validate:"required,email" example:"john@example.com"`
-	Password string `json:"password" validate:"required,min=8" example:"MyPass123!"`
+	Name     string `json:"name" validate:"required,min=3,max=50" example:"john_doe" binding:"required"`
+	Email    string `json:"email" validate:"required,email" example:"john@example.com" binding:"required,email"`
+	Password string `json:"password" validate:"required,min=8" example:"MySecurePass123!" binding:"required,min=8"`
 }
 
 // LoginUserRequest represents user login request
 type LoginUserRequest struct {
-	Email    string `json:"email" validate:"required,email" example:"john@example.com"`
-	Password string `json:"password" validate:"required" example:"MyPass123!"`
+	Email    string `json:"email" validate:"required,email" example:"john@example.com" binding:"required,email"`
+	Password string `json:"password" validate:"required" example:"MySecurePass123!" binding:"required"`
 }
 
-// RequestPasswordChangeRequest represents request password change request
-type RequestPasswordChangeRequest struct {
-	Email     string    `json:"email" validate:"required,email"`
+// RequestChangePasswordOtpRequest represents request password reset request
+type RequestChangePasswordOtpRequest struct {
+	Email string `json:"email" validate:"required,email" example:"john@example.com" binding:"required,email"`
 }
 
 // ChangePasswordRequest represents change password request
 type ChangePasswordRequest struct {
-	Password string `json:"password" validate:"required,min=8,regex=^(?=.*[A-Z])(?=.*[0-9])(?=.*[_!@#$%^&*])[A-Za-z0-9_!@#$%^&*]{8,}$"`
-	NewPassword string `json:"new_password" validate:"required"`
+	NewPassword     string `json:"new_password" validate:"required,min=8" example:"MyNewSecurePass123!" binding:"required,min=8"`
+	ConfirmPassword string `json:"confirm_password" validate:"required" example:"MyNewSecurePass123!" binding:"required"`
+}
+
+// VerifyOTPAndEmailRequest represents OTP verification request for password reset
+type VerifyOTPAndEmailRequest struct {
+	Email    string `json:"email" validate:"required,email" example:"john@example.com" binding:"required,email"`
+	TokenOtp string `json:"token_otp" validate:"required,len=6" example:"ABCD12" binding:"required,len=6"`
 }
