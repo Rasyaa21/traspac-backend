@@ -9,15 +9,77 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "contact": {},
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/change-password": {
+            "post": {
+                "description": "Change user password using verification token obtained from OTP verification",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Password Reset"
+                ],
+                "summary": "Change password with verification token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Verification token from OTP verification",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "New password data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_request.ChangePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password changed successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request data or token",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Invalid or expired verification token",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
-                "description": "Authenticate user with email and password",
+                "description": "Authenticate user with email and password. Returns JWT token on successful authentication.",
                 "consumes": [
                     "application/json"
                 ],
@@ -40,8 +102,8 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "User created successfully",
+                    "200": {
+                        "description": "Login successful",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
                         }
@@ -63,7 +125,7 @@ const docTemplate = `{
         },
         "/auth/register": {
             "post": {
-                "description": "Create a new user account",
+                "description": "Create a new user account with email verification. Returns JWT token and sends verification email.",
                 "consumes": [
                     "application/json"
                 ],
@@ -100,15 +162,260 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/auth/request-change-password": {
+            "post": {
+                "description": "Send OTP code to user's email for password reset. OTP expires in 24 hours.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Password Reset"
+                ],
+                "summary": "Request password reset",
+                "parameters": [
+                    {
+                        "description": "Email address for password reset",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_request.RequestChangePasswordOtpRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password reset email sent successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Email not found",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/resend-verification": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Resend 6-digit OTP verification code to user's email address. Rate limited to once per minute to prevent spam. User must be authenticated to use this endpoint.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Email Verification"
+                ],
+                "summary": "Resend email verification code",
+                "responses": {
+                    "200": {
+                        "description": "Verification email sent successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Rate limit exceeded or email already verified",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests - rate limited",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/verification-status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the current email verification status for the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Email Verification"
+                ],
+                "summary": "Check email verification status",
+                "responses": {
+                    "200": {
+                        "description": "Verification status retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/verify-email": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Verify user's email address using 6-digit OTP code received via email. User must be authenticated to use this endpoint.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Email Verification"
+                ],
+                "summary": "Verify email address with OTP",
+                "parameters": [
+                    {
+                        "description": "OTP verification data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_request.OtpVerificationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Email verified successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request data or OTP",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/verify-otp-password-change": {
+            "post": {
+                "description": "Verify OTP code received via email and get verification token for password reset",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Password Reset"
+                ],
+                "summary": "Verify OTP and get verification token",
+                "parameters": [
+                    {
+                        "description": "Email and OTP verification data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_request.VerifyOTPAndEmailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OTP verified successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request data or OTP",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Email not found or OTP expired",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
         "gin-backend-app_internal_dto_common.ErrorResponse": {
             "type": "object",
             "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Detailed error message"
+                },
                 "message": {
                     "type": "string",
-                    "example": "Error message"
+                    "example": "Something went wrong"
                 },
                 "success": {
                     "type": "boolean",
@@ -130,6 +437,24 @@ const docTemplate = `{
                 }
             }
         },
+        "gin-backend-app_internal_dto_request.ChangePasswordRequest": {
+            "type": "object",
+            "required": [
+                "confirm_password",
+                "new_password"
+            ],
+            "properties": {
+                "confirm_password": {
+                    "type": "string",
+                    "example": "MyNewSecurePass123!"
+                },
+                "new_password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "MyNewSecurePass123!"
+                }
+            }
+        },
         "gin-backend-app_internal_dto_request.CreateUserRequest": {
             "type": "object",
             "required": [
@@ -144,12 +469,14 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3,
                     "example": "john_doe"
                 },
                 "password": {
                     "type": "string",
                     "minLength": 8,
-                    "example": "MyPass123!"
+                    "example": "MySecurePass123!"
                 }
             }
         },
@@ -166,9 +493,58 @@ const docTemplate = `{
                 },
                 "password": {
                     "type": "string",
-                    "example": "MyPass123!"
+                    "example": "MySecurePass123!"
                 }
             }
+        },
+        "gin-backend-app_internal_dto_request.OtpVerificationRequest": {
+            "type": "object",
+            "required": [
+                "token_otp"
+            ],
+            "properties": {
+                "token_otp": {
+                    "type": "string",
+                    "example": "ABCD12"
+                }
+            }
+        },
+        "gin-backend-app_internal_dto_request.RequestChangePasswordOtpRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "john@example.com"
+                }
+            }
+        },
+        "gin-backend-app_internal_dto_request.VerifyOTPAndEmailRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "token_otp"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "john@example.com"
+                },
+                "token_otp": {
+                    "type": "string",
+                    "example": "ABCD12"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by a space and JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`
