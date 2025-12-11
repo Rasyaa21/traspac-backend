@@ -156,21 +156,6 @@ func GetClaimsFromHeader(c *gin.Context) (*Claims, error) {
     return ValidateToken(parts[1])
 }
 
-// Helper functions for Gin context
-func GetUserIDFromContext(c *gin.Context) (uuid.UUID, error) {
-    userID, exists := c.Get("user_id")
-    if !exists {
-        return uuid.Nil, errors.New("user not authenticated")
-    }
-
-    id, ok := userID.(uuid.UUID)
-    if !ok {
-        return uuid.Nil, errors.New("invalid user ID type")
-    }
-
-    return id, nil
-}
-
 func GetUserEmailFromContext(c *gin.Context) (string, error) {
     email, exists := c.Get("user_email")
     if !exists {
@@ -197,4 +182,18 @@ func GetUserNameFromContext(c *gin.Context) (string, error) {
     }
 
     return nameStr, nil
+}
+
+func GetUserIDFromContext(c *gin.Context) (uuid.UUID, error) {
+    userID, exists := c.Get("user_id")
+    if !exists {
+        return uuid.Nil, errors.New("user not authenticated")
+    }
+
+    id, ok := userID.(uuid.UUID)
+    if !ok {
+        return uuid.Nil, errors.New("invalid user ID type")
+    }
+
+    return id, nil
 }

@@ -48,19 +48,33 @@ services:
     ports:
       - "${PORT}:8080"
     environment:
+      # Database
       - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?sslmode=disable
-      - REDIS_URL=redis://redis:6379
-      - PORT=${PORT}
-      - JWT_SECRET=${JWT_SECRET}
-      - ENV=${ENV}
-      - GIN_MODE=${GIN_MODE}
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
+      
+      # Redis
+      - REDIS_URL=redis://redis:6379
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      
+      # App Config
+      - PORT=${PORT}
+      - JWT_SECRET=${JWT_SECRET}
+      - ENV=${ENV}
+      - GIN_MODE=${GIN_MODE}
+      - BASE_URL=${BASE_URL}
+      
+      # SMTP Configuration
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME}
+      - SMTP_SECURITY=${SMTP_SECURITY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,8 +94,8 @@ services:
     image: dpage/pgadmin4:latest
     container_name: ${PGADMIN_CONTAINER_NAME}
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
       PGADMIN_CONFIG_SERVER_MODE: ${PGADMIN_CONFIG_SERVER_MODE}
     ports:
       - "5050:80"
