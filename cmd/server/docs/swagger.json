@@ -397,6 +397,294 @@
                     }
                 }
             }
+        },
+        "/budget": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve detailed budget information for authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Budget Management"
+                ],
+                "summary": "Get user budget details",
+                "responses": {
+                    "200": {
+                        "description": "Budget details retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Budget not found",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update existing budget for authenticated user with default (50-30-20) or custom allocation",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Budget Management"
+                ],
+                "summary": "Update user budget",
+                "parameters": [
+                    {
+                        "description": "Budget data (custom percentages optional)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_request.BudgetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Budget updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Budget not found",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create budget for authenticated user with default (50-30-20) or custom allocation",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Budget Management"
+                ],
+                "summary": "Create user budget",
+                "parameters": [
+                    {
+                        "description": "Budget data (custom percentages optional)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_request.BudgetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Budget created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Budget already exists",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete the budget for authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Budget Management"
+                ],
+                "summary": "Delete user budget",
+                "responses": {
+                    "200": {
+                        "description": "Budget deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Budget not found",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/budget/analysis": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detailed analysis of budget allocation with recommendations",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Budget Management"
+                ],
+                "summary": "Get budget analysis and recommendations",
+                "responses": {
+                    "200": {
+                        "description": "Budget analysis retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Budget not found",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/budget/calculate": {
+            "get": {
+                "description": "Calculate budget allocation preview without saving to database",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Budget Management"
+                ],
+                "summary": "Calculate budget preview",
+                "parameters": [
+                    {
+                        "type": "number",
+                        "format": "float64",
+                        "description": "Weekly income amount",
+                        "name": "income",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "format": "float64",
+                        "description": "Custom savings percentage (default: 50)",
+                        "name": "savings_percent",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "format": "float64",
+                        "description": "Custom wants percentage (default: 30)",
+                        "name": "wants_percent",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "format": "float64",
+                        "description": "Custom needs percentage (default: 20)",
+                        "name": "needs_percent",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Budget calculation completed successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -428,6 +716,36 @@
                 "success": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "gin-backend-app_internal_dto_request.BudgetRequest": {
+            "type": "object",
+            "required": [
+                "weekly_income"
+            ],
+            "properties": {
+                "needs_percent": {
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0,
+                    "example": 20
+                },
+                "savings_percent": {
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0,
+                    "example": 50
+                },
+                "wants_percent": {
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0,
+                    "example": 30
+                },
+                "weekly_income": {
+                    "type": "number",
+                    "example": 1000000
                 }
             }
         },

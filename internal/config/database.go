@@ -32,30 +32,14 @@ func getPoolConfig() (maxOpen, maxIdle int, maxLifetime, maxIdleTime time.Durati
 
 func buildDSN() string {
 	if url := os.Getenv("DATABASE_URL"); url != "" {
-		// format: postgres://admin:root@localhost:5432/traspac_db?sslmode=disable
 		return url
 	}
 
-	host := os.Getenv("DB_HOST")
-	if host == "" {
-		host = "localhost"
-	}
-	user := os.Getenv("DB_USER")
-	if user == "" {
-		user = "admin"
-	}
-	password := os.Getenv("DB_PASSWORD")
-	if password == "" {
-		password = "root"
-	}
-	dbName := os.Getenv("DB_NAME")
-	if dbName == "" {
-		dbName = "traspac_db"
-	}
-	port := os.Getenv("DB_PORT")
-	if port == "" {
-		port = "5432"
-	}
+	host := getEnv("DB_HOST", "localhost")
+	user := getEnv("DB_USER", "admin")
+	password := getEnv("DB_PASSWORD", "root")
+	dbName := getEnv("DB_NAME", "traspac_db")
+	port := getEnv("DB_PORT", "5432")
 
 	// DSN style URL untuk postgres driver
 	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
@@ -64,10 +48,21 @@ func buildDSN() string {
 
 func InitDatabase() (*gorm.DB, error) {
 	dsn := buildDSN()
-	env := getEnv("DB_NAME", "traspac_db")
+	env := getEnv("ENV", "development")
+
+	// Configure logger based on environment
+	var logLevel logger.LogLevel
+	switch env {
+	case "production":
+		logLevel = logger.Error
+	case "testing":
+		logLevel = logger.Silent
+	default:
+		logLevel = logger.Info
+	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger:      logger.Default.LogMode(logger.Info),
+		Logger:      logger.Default.LogMode(logLevel),
 		PrepareStmt: true,
 	})
 	if err != nil {
@@ -89,17 +84,21 @@ func InitDatabase() (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	log.Printf("✅ DB connected (%s) - MaxOpen=%d MaxIdle=%d", env, maxOpen, maxIdle)
+	if env != "testing" {
+		log.Printf("✅ DB connected (%s) - MaxOpen=%d MaxIdle=%d", env, maxOpen, maxIdle)
+	}
 
-	// Optional: monitoring pool
-	setupPoolMonitoring(sqlDB)
+	// Setup monitoring only for non-testing environments
+	if env != "testing" {
+		setupPoolMonitoring(sqlDB)
+	}
 
-	// ENUMs & index perlu dibuat manual sebelum AutoMigrate
-	if err := setupEnums(db); err != nil {
+	// ENUMs & extensions setup
+	if err := setupExtensionsAndEnums(db); err != nil {
 		return nil, err
 	}
 
-	// AutoMigrate model-model keuangan
+	// AutoMigrate all models
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.UserBudget{},
@@ -112,169 +111,224 @@ func InitDatabase() (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to auto-migrate: %w", err)
 	}
 
-	// Tambah index tambahan yang GORM gak generate otomatis
-	if err := addFinanceIndexes(db); err != nil {
+	// Create custom indexes
+	if err := createCustomIndexes(db); err != nil {
 		return nil, err
 	}
 
-	log.Println("✅ Finance schema migrated & indexes created")
+	if env != "testing" {
+		log.Println("✅ Database schema migrated & indexes created")
+	}
+
 	return db, nil
 }
 
-func setupEnums(db *gorm.DB) error {
-	// Enable extension UUID kalau belum
+func setupExtensionsAndEnums(db *gorm.DB) error {
+	// Enable UUID extension
+	if err := db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`).Error; err != nil {
+		return fmt.Errorf("failed to enable uuid-ossp: %w", err)
+	}
+
+	// Enable pgcrypto for gen_random_uuid()
 	if err := db.Exec(`CREATE EXTENSION IF NOT EXISTS pgcrypto`).Error; err != nil {
 		return fmt.Errorf("failed to enable pgcrypto: %w", err)
 	}
 
-	// ENUM income/expense
-	if err := db.Exec(`
-		DO $$
-		BEGIN
-			IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'transaction_group_enum') THEN
-				CREATE TYPE transaction_group_enum AS ENUM ('income', 'expense');
-			END IF;
-		END$$;
-	`).Error; err != nil {
-		return fmt.Errorf("failed to create transaction_group_enum: %w", err)
+	// Create ENUM types
+	enums := []struct {
+		name   string
+		values []string
+	}{
+		{
+			name:   "transaction_group_enum",
+			values: []string{"income", "expense"},
+		},
+		{
+			name:   "period_type_enum",
+			values: []string{"weekly", "monthly"},
+		},
+		{
+			name: "ai_analysis_type_enum",
+			values: []string{
+				"weekly_summary",
+				"monthly_summary",
+				"yearly_summary",
+				"compare_period",
+				"budget_evaluation",
+			},
+		},
+		{
+			name:   "token_type_enum",
+			values: []string{"email_verification", "password_reset", "two_factor"},
+		},
 	}
 
-	// ENUM period_type_enum
-	if err := db.Exec(`
-		DO $$
-		BEGIN
-			IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'period_type_enum') THEN
-				CREATE TYPE period_type_enum AS ENUM ('weekly', 'monthly');
-			END IF;
-		END$$;
-	`).Error; err != nil {
-		return fmt.Errorf("failed to create period_type_enum: %w", err)
-	}
-
-	// ENUM ai_analysis_type_enum
-	if err := db.Exec(`
-		DO $$
-		BEGIN
-			IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ai_analysis_type_enum') THEN
-				CREATE TYPE ai_analysis_type_enum AS ENUM (
-					'weekly_summary',
-					'monthly_summary',
-					'yearly_summary',
-					'compare_period',
-					'budget_evaluation'
-				);
-			END IF;
-		END$$;
-	`).Error; err != nil {
-		return fmt.Errorf("failed to create ai_analysis_type_enum: %w", err)
+	for _, enum := range enums {
+		if err := createEnumType(db, enum.name, enum.values); err != nil {
+			return fmt.Errorf("failed to create %s: %w", enum.name, err)
+		}
 	}
 
 	return nil
 }
 
-func addFinanceIndexes(db *gorm.DB) error {
-
-	if err := db.Exec(`
-		CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique 
-		ON users(LOWER(email));
-	`).Error; err != nil {
-		return fmt.Errorf("failed to create idx_users_email_unique %w", err)
-	}
-
-	if err := db.Exec(`
-		CREATE UNIQUE INDEX IF NOT EXISTS idx_users_name_unique
-		ON users (LOWER(name));
-	`).Error; err != nil {
-		return fmt.Errorf("failed to create idx_users_name_unique: %w", err)
-	}
-
-	// user_budgets
-	if err := db.Exec(`
-		CREATE UNIQUE INDEX IF NOT EXISTS idx_user_budgets_user_id
-		ON user_budgets(user_id);
-	`).Error; err != nil {
+func createEnumType(db *gorm.DB, typeName string, values []string) error {
+	// Check if enum exists
+	var exists bool
+	err := db.Raw("SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname = ?)", typeName).Scan(&exists).Error
+	if err != nil {
 		return err
 	}
 
-	// categories
-	if err := db.Exec(`
-		CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_user_name_type
-		ON categories (user_id, LOWER(name), group_type);
-	`).Error; err != nil {
-		return err
+	if !exists {
+		// Build values string
+		valuesStr := ""
+		for i, value := range values {
+			if i > 0 {
+				valuesStr += ", "
+			}
+			valuesStr += fmt.Sprintf("'%s'", value)
+		}
+
+		query := fmt.Sprintf("CREATE TYPE %s AS ENUM (%s)", typeName, valuesStr)
+		if err := db.Exec(query).Error; err != nil {
+			return err
+		}
 	}
 
-	if err := db.Exec(`
-		CREATE INDEX IF NOT EXISTS idx_categories_user_group_type
-		ON categories (user_id, group_type);
-	`).Error; err != nil {
-		return err
+	return nil
+}
+
+func createCustomIndexes(db *gorm.DB) error {
+	indexes := []struct {
+		name  string
+		table string
+		query string
+	}{
+		// Users indexes
+		{
+			name:  "idx_users_email_unique",
+			table: "users",
+			query: "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(LOWER(email))",
+		},
+		{
+			name:  "idx_users_name_unique",
+			table: "users",
+			query: "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_name_unique ON users(LOWER(name))",
+		},
+
+		// User Budgets indexes
+		{
+			name:  "idx_user_budgets_user_id",
+			table: "user_budgets",
+			query: "CREATE INDEX IF NOT EXISTS idx_user_budgets_user_id ON user_budgets(user_id)",
+		},
+		{
+			name:  "idx_user_budgets_income_weekly",
+			table: "user_budgets",
+			query: "CREATE INDEX IF NOT EXISTS idx_user_budgets_income_weekly ON user_budgets(income_weekly)",
+		},
+
+		// Categories indexes
+		{
+			name:  "idx_categories_user_name_type",
+			table: "categories",
+			query: "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_user_name_type ON categories(user_id, LOWER(name), group_type)",
+		},
+		{
+			name:  "idx_categories_user_group_type",
+			table: "categories",
+			query: "CREATE INDEX IF NOT EXISTS idx_categories_user_group_type ON categories(user_id, group_type)",
+		},
+
+		// Transactions indexes
+		{
+			name:  "idx_transactions_user_date",
+			table: "transactions",
+			query: "CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions(user_id, date DESC)",
+		},
+		{
+			name:  "idx_transactions_user_category_date",
+			table: "transactions",
+			query: "CREATE INDEX IF NOT EXISTS idx_transactions_user_category_date ON transactions(user_id, category_id, date DESC)",
+		},
+		{
+			name:  "idx_transactions_user_type_date",
+			table: "transactions",
+			query: "CREATE INDEX IF NOT EXISTS idx_transactions_user_type_date ON transactions(user_id, type, date DESC)",
+		},
+
+		// Period Reports indexes
+		{
+			name:  "idx_period_reports_user_period",
+			table: "period_reports",
+			query: "CREATE INDEX IF NOT EXISTS idx_period_reports_user_period ON period_reports(user_id, period_start, period_end)",
+		},
+		{
+			name:  "idx_period_reports_user_type",
+			table: "period_reports",
+			query: "CREATE INDEX IF NOT EXISTS idx_period_reports_user_type ON period_reports(user_id, period_type)",
+		},
+
+		// AI Logs indexes
+		{
+			name:  "idx_ai_logs_user_created_at",
+			table: "ai_logs",
+			query: "CREATE INDEX IF NOT EXISTS idx_ai_logs_user_created_at ON ai_logs(user_id, created_at DESC)",
+		},
+		{
+			name:  "idx_ai_logs_user_analysis_type",
+			table: "ai_logs",
+			query: "CREATE INDEX IF NOT EXISTS idx_ai_logs_user_analysis_type ON ai_logs(user_id, analysis_type, created_at DESC)",
+		},
+		{
+			name:  "idx_ai_logs_transaction_id",
+			table: "ai_logs",
+			query: "CREATE INDEX IF NOT EXISTS idx_ai_logs_transaction_id ON ai_logs(transaction_id)",
+		},
+		{
+			name:  "idx_ai_logs_category_id",
+			table: "ai_logs",
+			query: "CREATE INDEX IF NOT EXISTS idx_ai_logs_category_id ON ai_logs(category_id)",
+		},
+
+		// User Tokens indexes - FIXED untuk struktur baru
+		{
+			name:  "idx_user_tokens_token_otp",
+			table: "user_tokens",
+			query: "CREATE UNIQUE INDEX IF NOT EXISTS idx_user_tokens_token_otp ON user_tokens(token_otp)",
+		},
+		{
+			name:  "idx_user_tokens_verify_token",
+			table: "user_tokens",
+			query: "CREATE UNIQUE INDEX IF NOT EXISTS idx_user_tokens_verify_token ON user_tokens(verify_token) WHERE verify_token IS NOT NULL",
+		},
+		{
+			name:  "idx_user_tokens_user_type",
+			table: "user_tokens",
+			query: "CREATE INDEX IF NOT EXISTS idx_user_tokens_user_type ON user_tokens(user_id, token_type)",
+		},
+		{
+			name:  "idx_user_tokens_expires_at",
+			table: "user_tokens",
+			query: "CREATE INDEX IF NOT EXISTS idx_user_tokens_expires_at ON user_tokens(expires_at)",
+		},
+		{
+			name:  "idx_user_tokens_used_at",
+			table: "user_tokens",
+			query: "CREATE INDEX IF NOT EXISTS idx_user_tokens_used_at ON user_tokens(used_at)",
+		},
+		{
+			name:  "idx_user_tokens_user_id",
+			table: "user_tokens",
+			query: "CREATE INDEX IF NOT EXISTS idx_user_tokens_user_id ON user_tokens(user_id)",
+		},
 	}
 
-	// transactions
-	if err := db.Exec(`
-		CREATE INDEX IF NOT EXISTS idx_transactions_user_date
-		ON transactions (user_id, date DESC);
-	`).Error; err != nil {
-		return err
-	}
-
-	if err := db.Exec(`
-		CREATE INDEX IF NOT EXISTS idx_transactions_user_category_date
-		ON transactions (user_id, category_id, date DESC);
-	`).Error; err != nil {
-		return err
-	}
-
-	if err := db.Exec(`
-		CREATE INDEX IF NOT EXISTS idx_transactions_user_type_date
-		ON transactions (user_id, type, date DESC);
-	`).Error; err != nil {
-		return err
-	}
-
-	// period_reports
-	if err := db.Exec(`
-		CREATE INDEX IF NOT EXISTS idx_period_reports_user_period
-		ON period_reports (user_id, period_start, period_end);
-	`).Error; err != nil {
-		return err
-	}
-
-	if err := db.Exec(`
-		CREATE INDEX IF NOT EXISTS idx_period_reports_user_type
-		ON period_reports (user_id, period_type);
-	`).Error; err != nil {
-		return err
-	}
-
-	// ai_logs
-	if err := db.Exec(`
-		CREATE INDEX IF NOT EXISTS idx_ai_logs_user_created_at
-		ON ai_logs (user_id, created_at DESC);
-	`).Error; err != nil {
-		return err
-	}
-
-	if err := db.Exec(`
-		CREATE INDEX IF NOT EXISTS idx_ai_logs_user_analysis_type
-		ON ai_logs (user_id, analysis_type, created_at DESC);
-	`).Error; err != nil {
-		return err
-	}
-
-	if err := db.Exec(`
-		CREATE INDEX IF NOT EXISTS idx_ai_logs_transaction_id
-		ON ai_logs (transaction_id);
-	`).Error; err != nil {
-		return err
-	}
-
-	if err := db.Exec(`
-		CREATE INDEX IF NOT EXISTS idx_ai_logs_category_id
-		ON ai_logs (category_id);
-	`).Error; err != nil {
-		return err
+	for _, idx := range indexes {
+		if err := db.Exec(idx.query).Error; err != nil {
+			return fmt.Errorf("failed to create index %s on table %s: %w", idx.name, idx.table, err)
+		}
 	}
 
 	return nil

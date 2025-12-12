@@ -22,6 +22,29 @@ definitions:
         example: true
         type: boolean
     type: object
+  gin-backend-app_internal_dto_request.BudgetRequest:
+    properties:
+      needs_percent:
+        example: 20
+        maximum: 100
+        minimum: 0
+        type: number
+      savings_percent:
+        example: 50
+        maximum: 100
+        minimum: 0
+        type: number
+      wants_percent:
+        example: 30
+        maximum: 100
+        minimum: 0
+        type: number
+      weekly_income:
+        example: 1000000
+        type: number
+    required:
+    - weekly_income
+    type: object
   gin-backend-app_internal_dto_request.ChangePasswordRequest:
     properties:
       confirm_password:
@@ -362,6 +385,193 @@ paths:
       summary: Verify OTP and get verification token
       tags:
       - Password Reset
+  /budget:
+    delete:
+      consumes:
+      - application/json
+      description: Delete the budget for authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Budget deleted successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "404":
+          description: Budget not found
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete user budget
+      tags:
+      - Budget Management
+    get:
+      consumes:
+      - application/json
+      description: Retrieve detailed budget information for authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Budget details retrieved successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "404":
+          description: Budget not found
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user budget details
+      tags:
+      - Budget Management
+    post:
+      consumes:
+      - application/json
+      description: Create budget for authenticated user with default (50-30-20) or
+        custom allocation
+      parameters:
+      - description: Budget data (custom percentages optional)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/gin-backend-app_internal_dto_request.BudgetRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Budget created successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "409":
+          description: Budget already exists
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create user budget
+      tags:
+      - Budget Management
+    put:
+      consumes:
+      - application/json
+      description: Update existing budget for authenticated user with default (50-30-20)
+        or custom allocation
+      parameters:
+      - description: Budget data (custom percentages optional)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/gin-backend-app_internal_dto_request.BudgetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Budget updated successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "404":
+          description: Budget not found
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update user budget
+      tags:
+      - Budget Management
+  /budget/analysis:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed analysis of budget allocation with recommendations
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Budget analysis retrieved successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "404":
+          description: Budget not found
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get budget analysis and recommendations
+      tags:
+      - Budget Management
+  /budget/calculate:
+    get:
+      consumes:
+      - application/json
+      description: Calculate budget allocation preview without saving to database
+      parameters:
+      - description: Weekly income amount
+        format: float64
+        in: query
+        name: income
+        required: true
+        type: number
+      - description: 'Custom savings percentage (default: 50)'
+        format: float64
+        in: query
+        name: savings_percent
+        type: number
+      - description: 'Custom wants percentage (default: 30)'
+        format: float64
+        in: query
+        name: wants_percent
+        type: number
+      - description: 'Custom needs percentage (default: 20)'
+        format: float64
+        in: query
+        name: needs_percent
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Budget calculation completed successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      summary: Calculate budget preview
+      tags:
+      - Budget Management
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.
