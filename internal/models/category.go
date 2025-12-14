@@ -11,7 +11,6 @@ type Category struct {
     ID          uuid.UUID    `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
     UserID      uuid.UUID    `json:"user_id" gorm:"type:uuid;not null;index"`
     Name        string       `json:"name" gorm:"type:varchar(100);not null"`
-    CategoryType CategoryType `json:"category_type" gorm:"type:varchar(20);not null"`
     Description *string      `json:"description" gorm:"type:text"`
     IsDefault   bool         `json:"is_default" gorm:"default:false"`
     CreatedAt   time.Time    `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`

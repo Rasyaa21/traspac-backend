@@ -232,17 +232,27 @@ func createCustomIndexes(db *gorm.DB) error {
 			table: "user_budgets",
 			query: "CREATE INDEX IF NOT EXISTS idx_user_budgets_income_weekly ON user_budgets(income_weekly)",
 		},
-
-		// Categories indexes - FIXED: menggunakan category_type bukan group_type
 		{
-			name:  "idx_categories_user_name_type",
+			name:  "idx_user_budgets_usage",
+			table: "user_budgets",
+			query: "CREATE INDEX IF NOT EXISTS idx_user_budgets_usage ON user_budgets(needs_used, wants_used, savings_used)",
+		},
+
+		// Categories indexes - Removed category_type references
+		{
+			name:  "idx_categories_user_name",
 			table: "categories",
-			query: "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_user_name_type ON categories(user_id, LOWER(name), category_type)",
+			query: "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_user_name ON categories(user_id, LOWER(name))",
 		},
 		{
-			name:  "idx_categories_user_category_type",
+			name:  "idx_categories_user_id",
 			table: "categories",
-			query: "CREATE INDEX IF NOT EXISTS idx_categories_user_category_type ON categories(user_id, category_type)",
+			query: "CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id)",
+		},
+		{
+			name:  "idx_categories_is_default",
+			table: "categories",
+			query: "CREATE INDEX IF NOT EXISTS idx_categories_is_default ON categories(user_id, is_default)",
 		},
 
 		// Transactions indexes
@@ -260,6 +270,11 @@ func createCustomIndexes(db *gorm.DB) error {
 			name:  "idx_transactions_user_type_date",
 			table: "transactions",
 			query: "CREATE INDEX IF NOT EXISTS idx_transactions_user_type_date ON transactions(user_id, type, date DESC)",
+		},
+		{
+			name:  "idx_transactions_budget_category",
+			table: "transactions",
+			query: "CREATE INDEX IF NOT EXISTS idx_transactions_budget_category ON transactions(user_id, budget_category, date DESC)",
 		},
 
 		// Period Reports indexes

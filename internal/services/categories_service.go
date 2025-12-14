@@ -41,15 +41,10 @@ func (s *CategoryService) CreateCategory(userID uuid.UUID, name string, category
 		return nil, errors.New("category with this name already exists")
 	}
 
-	// Validate category type
-	if !s.isValidCategoryType(categoryType) {
-		return nil, errors.New("invalid category type")
-	}
 
 	category := &models.Category{
 		UserID:       userID,
 		Name:         strings.TrimSpace(name),
-		CategoryType: categoryType,
 		Description:  description,
 		IsDefault:    false,
 	}
@@ -106,10 +101,6 @@ func (s *CategoryService) GetUserCategoriesByType(userID uuid.UUID, categoryType
 		return nil, errors.New("user not found")
 	}
 
-	// Validate category type
-	if !s.isValidCategoryType(categoryType) {
-		return nil, errors.New("invalid category type")
-	}
 
 	categories, err := s.CategoryRepo.GetCategoriesByUserIDAndType(userID, categoryType)
 	if err != nil {
@@ -159,13 +150,6 @@ func (s *CategoryService) UpdateCategory(categoryID, userID uuid.UUID, name *str
 		category.Name = trimmedName
 	}
 
-	// Update category type if provided
-	if categoryType != nil {
-		if !s.isValidCategoryType(*categoryType) {
-			return nil, errors.New("invalid category type")
-		}
-		category.CategoryType = *categoryType
-	}
 
 	// Update description if provided
 	if description != nil {
@@ -210,18 +194,3 @@ func (s *CategoryService) DeleteCategory(categoryID, userID uuid.UUID) error {
 	return nil
 }
 
-// Helper method to validate category type
-func (s *CategoryService) isValidCategoryType(categoryType models.CategoryType) bool {
-	validTypes := []models.CategoryType{
-		models.CategoryTypeNeeds,
-		models.CategoryTypeWants,
-		models.CategoryTypeSavings,
-	}
-
-	for _, validType := range validTypes {
-		if categoryType == validType {
-			return true
-		}
-	}
-	return false
-}

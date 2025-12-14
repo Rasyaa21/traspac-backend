@@ -549,45 +549,30 @@ paths:
       summary: Update user budget
       tags:
       - Budget Management
-  /budget/calculate:
+  /budget/summary:
     get:
       consumes:
       - application/json
-      description: Calculate budget allocation preview without saving to database
-      parameters:
-      - description: Weekly income amount
-        format: float64
-        in: query
-        name: income
-        required: true
-        type: number
-      - description: 'Custom savings percentage (default: 50)'
-        format: float64
-        in: query
-        name: savings_percent
-        type: number
-      - description: 'Custom wants percentage (default: 30)'
-        format: float64
-        in: query
-        name: wants_percent
-        type: number
-      - description: 'Custom needs percentage (default: 20)'
-        format: float64
-        in: query
-        name: needs_percent
-        type: number
+      description: Retrieve detailed budget summary including allocation, usage, and
+        remaining amounts
       produces:
       - application/json
       responses:
         "200":
-          description: Budget calculation completed successfully
+          description: Budget summary retrieved successfully
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
-        "400":
-          description: Invalid parameters
+        "401":
+          description: Authentication required
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
-      summary: Calculate budget preview
+        "404":
+          description: Budget not found
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get detailed budget summary with usage
       tags:
       - Budget Management
   /categories:

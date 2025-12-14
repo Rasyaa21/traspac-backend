@@ -586,9 +586,14 @@
                 }
             }
         },
-        "/budget/calculate": {
+        "/budget/summary": {
             "get": {
-                "description": "Calculate budget allocation preview without saving to database",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve detailed budget summary including allocation, usage, and remaining amounts",
                 "consumes": [
                     "application/json"
                 ],
@@ -598,47 +603,22 @@
                 "tags": [
                     "Budget Management"
                 ],
-                "summary": "Calculate budget preview",
-                "parameters": [
-                    {
-                        "type": "number",
-                        "format": "float64",
-                        "description": "Weekly income amount",
-                        "name": "income",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "number",
-                        "format": "float64",
-                        "description": "Custom savings percentage (default: 50)",
-                        "name": "savings_percent",
-                        "in": "query"
-                    },
-                    {
-                        "type": "number",
-                        "format": "float64",
-                        "description": "Custom wants percentage (default: 30)",
-                        "name": "wants_percent",
-                        "in": "query"
-                    },
-                    {
-                        "type": "number",
-                        "format": "float64",
-                        "description": "Custom needs percentage (default: 20)",
-                        "name": "needs_percent",
-                        "in": "query"
-                    }
-                ],
+                "summary": "Get detailed budget summary with usage",
                 "responses": {
                     "200": {
-                        "description": "Budget calculation completed successfully",
+                        "description": "Budget summary retrieved successfully",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
                         }
                     },
-                    "400": {
-                        "description": "Invalid parameters",
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Budget not found",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
                         }

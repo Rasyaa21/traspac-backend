@@ -7,7 +7,6 @@ const (
 	TransactionGroupExpense TransactionGroupType = "expense"
 )
 
-// Add CategoryType enum for categories
 type CategoryType string
 
 const (

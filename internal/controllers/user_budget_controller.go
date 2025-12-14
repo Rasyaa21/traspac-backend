@@ -3,10 +3,10 @@ package controllers
 import (
 	"gin-backend-app/internal/dto/common"
 	"gin-backend-app/internal/dto/request"
+	"gin-backend-app/internal/dto/response"
 	"gin-backend-app/internal/services"
 	"gin-backend-app/pkg/utils"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -63,7 +63,6 @@ func (bc *UserBudgetController) CreateUserBudget(c *gin.Context) {
 		allocation = &customAlloc
 		isCustom = true
 	}
-	// If no custom percentages provided, allocation will be nil and service will use default
 
 	budget, err := bc.UserBudgetService.CreateUserBudget(userID, req.WeeklyIncome, allocation)
 	if err != nil {
@@ -76,9 +75,9 @@ func (bc *UserBudgetController) CreateUserBudget(c *gin.Context) {
 	}
 
 	// Calculate percentages for response
-	savingsPercent := (budget.SavingsBudget / budget.IncomeWeekly) * 100
-	wantsPercent := (budget.WantsBudget / budget.IncomeWeekly) * 100
-	needsPercent := (budget.NeedsBudget / budget.IncomeWeekly) * 100
+	savingsPercent := float64(budget.SavedMoney) / float64(budget.IncomeWeekly) * 100
+	wantsPercent := float64(budget.WantsBudget) / float64(budget.IncomeWeekly) * 100
+	needsPercent := float64(budget.NeedsBudget) / float64(budget.IncomeWeekly) * 100
 
 	responseData := gin.H{
 		"budget": gin.H{
@@ -87,8 +86,7 @@ func (bc *UserBudgetController) CreateUserBudget(c *gin.Context) {
 			"weekly_income":  budget.IncomeWeekly,
 			"needs_budget":   budget.NeedsBudget,
 			"wants_budget":   budget.WantsBudget,
-			"savings_budget": budget.SavingsBudget,
-			"remaining":      budget.CalculateRemainingIncome(),
+			"savings_budget": budget.SavedMoney,
 		},
 		"allocation": gin.H{
 			"savings_percent": savingsPercent,
@@ -96,7 +94,7 @@ func (bc *UserBudgetController) CreateUserBudget(c *gin.Context) {
 			"needs_percent":   needsPercent,
 		},
 		"breakdown": gin.H{
-			"savings_amount": budget.SavingsBudget,
+			"savings_amount": budget.SavedMoney,
 			"wants_amount":   budget.WantsBudget,
 			"needs_amount":   budget.NeedsBudget,
 		},
@@ -145,17 +143,14 @@ func (bc *UserBudgetController) UpdateUserBudget(c *gin.Context) {
 		return
 	}
 
-	// Determine allocation (default or custom)
 	var allocation *services.BudgetAllocation
 	isCustom := false
 
 	if req.SavingsPercent != nil && req.WantsPercent != nil && req.NeedsPercent != nil {
-		// Custom allocation provided
 		customAlloc := services.NewCustomAllocation(*req.SavingsPercent, *req.WantsPercent, *req.NeedsPercent)
 		allocation = &customAlloc
 		isCustom = true
 	}
-	// If no custom percentages provided, allocation will be nil and service will use default
 
 	budget, err := bc.UserBudgetService.UpdateUserBudget(userID, req.WeeklyIncome, allocation)
 	if err != nil {
@@ -167,33 +162,33 @@ func (bc *UserBudgetController) UpdateUserBudget(c *gin.Context) {
 		return
 	}
 
-	// Calculate percentages for response
-	savingsPercent := (budget.SavingsBudget / budget.IncomeWeekly) * 100
-	wantsPercent := (budget.WantsBudget / budget.IncomeWeekly) * 100
-	needsPercent := (budget.NeedsBudget / budget.IncomeWeekly) * 100
+	savingsPercent := float64(budget.SavedMoney) / float64(budget.IncomeWeekly) * 100
+	wantsPercent := float64(budget.WantsBudget) / float64(budget.IncomeWeekly) * 100
+	needsPercent := float64(budget.NeedsBudget) / float64(budget.IncomeWeekly) * 100
 
-	responseData := gin.H{
-		"budget": gin.H{
-			"id":             budget.ID,
-			"user_id":        budget.UserID,
-			"weekly_income":  budget.IncomeWeekly,
-			"needs_budget":   budget.NeedsBudget,
-			"wants_budget":   budget.WantsBudget,
-			"savings_budget": budget.SavingsBudget,
-			"remaining":      budget.CalculateRemainingIncome(),
-		},
-		"allocation": gin.H{
-			"savings_percent": savingsPercent,
-			"wants_percent":   wantsPercent,
-			"needs_percent":   needsPercent,
-		},
-		"breakdown": gin.H{
-			"savings_amount": budget.SavingsBudget,
-			"wants_amount":   budget.WantsBudget,
-			"needs_amount":   budget.NeedsBudget,
-		},
-		"is_custom": isCustom,
-	}
+	responseData := response.UserBudgetResponse{
+	Budget: response.BudgetResponse{
+		ID:            budget.ID,
+		UserID:        budget.UserID,
+		WeeklyIncome:  budget.IncomeWeekly,
+		NeedsBudget:   budget.NeedsBudget,
+		WantsBudget:   budget.WantsBudget,
+		SavingsBudget: budget.SavedMoney,
+	},
+	Allocation: response.AllocationResponse{
+		NeedsPercent:   int(needsPercent),
+		WantsPercent:   int(wantsPercent),
+		SavingsPercent: int(savingsPercent),
+	},
+	Breakdown: response.BreakdownResponse{
+		NeedsAmount:   budget.NeedsBudget,
+		WantsAmount:   budget.WantsBudget,
+		SavingsAmount: budget.SavedMoney,
+	},
+	IsCustom: isCustom,
+}
+
+
 
 	message := "Budget updated successfully"
 	if !isCustom {
@@ -233,36 +228,33 @@ func (bc *UserBudgetController) GetUserBudget(c *gin.Context) {
 		return
 	}
 
-	// Calculate percentages for display
-	savingsPercent := (budget.SavingsBudget / budget.IncomeWeekly) * 100
-	wantsPercent := (budget.WantsBudget / budget.IncomeWeekly) * 100
-	needsPercent := (budget.NeedsBudget / budget.IncomeWeekly) * 100
+	savingsPercent := float64(budget.SavedMoney) / float64(budget.IncomeWeekly) * 100
+	wantsPercent := float64(budget.WantsBudget) / float64(budget.IncomeWeekly) * 100
+	needsPercent := float64(budget.NeedsBudget) / float64(budget.IncomeWeekly) * 100
 
-	// Determine if it's using default allocation
-	isDefault := (savingsPercent == 50.0 && wantsPercent == 30.0 && needsPercent == 20.0)
+	responseData := response.UserBudgetResponse{
+	Budget: response.BudgetResponse{
+		ID:            budget.ID,
+		UserID:        budget.UserID,
+		WeeklyIncome:  budget.IncomeWeekly,
+		NeedsBudget:   budget.NeedsBudget,
+		WantsBudget:   budget.WantsBudget,
+		SavingsBudget: budget.SavedMoney,
+	},
+	Allocation: response.AllocationResponse{
+		NeedsPercent:   int(needsPercent),
+		WantsPercent:   int(wantsPercent),
+		SavingsPercent: int(savingsPercent),
+	},
+	Breakdown: response.BreakdownResponse{
+		NeedsAmount:   budget.NeedsBudget,
+		WantsAmount:   budget.WantsBudget,
+		SavingsAmount: budget.SavedMoney,
+	},
+}
 
-	common.SendResponse(c, http.StatusOK, gin.H{
-		"budget": gin.H{
-			"id":             budget.ID,
-			"user_id":        budget.UserID,
-			"weekly_income":  budget.IncomeWeekly,
-			"needs_budget":   budget.NeedsBudget,
-			"wants_budget":   budget.WantsBudget,
-			"savings_budget": budget.SavingsBudget,
-			"remaining":      budget.CalculateRemainingIncome(),
-			"created_at":     budget.CreatedAt,
-			"updated_at":     budget.UpdatedAt,
-		},
-		"allocation": gin.H{
-			"savings_percent": savingsPercent,
-			"wants_percent":   wantsPercent,
-			"needs_percent":   needsPercent,
-		},
-		"allocation_type": gin.H{
-			"is_default": isDefault,
-			"is_custom":  !isDefault,
-		},
-	}, "Budget details retrieved successfully")
+
+	common.SendResponse(c, http.StatusOK, responseData, "Budget details retrieved successfully")
 }
 
 // DeleteUserBudget godoc
@@ -294,66 +286,39 @@ func (bc *UserBudgetController) DeleteUserBudget(c *gin.Context) {
 	}
 
 	common.SendResponse(c, http.StatusOK, gin.H{
-		"user_id":        userID,
-		"deleted_at":     "now",
-		"status":         "deleted",
+		"user_id":    userID,
+		"deleted_at": "now",
+		"status":     "deleted",
 	}, "Budget deleted successfully")
 }
 
-
-// CalculateBudget godoc
-// @Summary Calculate budget preview
-// @Description Calculate budget allocation preview without saving to database
+// GetBudgetSummary godoc
+// @Summary Get detailed budget summary with usage
+// @Description Retrieve detailed budget summary including allocation, usage, and remaining amounts
 // @Tags Budget Management
 // @Accept json
 // @Produce json
-// @Param income query float64 true "Weekly income amount"
-// @Param savings_percent query float64 false "Custom savings percentage (default: 50)"
-// @Param wants_percent query float64 false "Custom wants percentage (default: 30)"
-// @Param needs_percent query float64 false "Custom needs percentage (default: 20)"
-// @Success 200 {object} common.Response "Budget calculation completed successfully"
-// @Failure 400 {object} common.ErrorResponse "Invalid parameters"
-// @Router /budget/calculate [get]
-func (bc *UserBudgetController) CalculateBudget(c *gin.Context) {
-    incomeStr := c.Query("income")
-    if incomeStr == "" {
-        common.SendError(c, http.StatusBadRequest, "Income parameter is required")
+// @Success 200 {object} common.Response "Budget summary retrieved successfully"
+// @Failure 401 {object} common.ErrorResponse "Authentication required"
+// @Failure 404 {object} common.ErrorResponse "Budget not found"
+// @Security BearerAuth
+// @Router /budget/summary [get]
+func (bc *UserBudgetController) GetBudgetSummary(c *gin.Context) {
+    userID, err := utils.GetUserIDFromContext(c)
+    if err != nil {
+        common.SendError(c, http.StatusUnauthorized, "Authentication required")
         return
     }
 
-    income, err := strconv.ParseFloat(incomeStr, 64)
-    if err != nil || income <= 0 {
-        common.SendError(c, http.StatusBadRequest, "Invalid income amount")
-        return
-    }
-
-    // Check for custom percentages
-    var allocation *services.BudgetAllocation
-
-    savingsStr := c.Query("savings_percent")
-    wantsStr := c.Query("wants_percent")
-    needsStr := c.Query("needs_percent")
-
-    if savingsStr != "" && wantsStr != "" && needsStr != "" {
-        savings, err1 := strconv.ParseFloat(savingsStr, 64)
-        wants, err2 := strconv.ParseFloat(wantsStr, 64)
-        needs, err3 := strconv.ParseFloat(needsStr, 64)
-
-        if err1 != nil || err2 != nil || err3 != nil {
-            common.SendError(c, http.StatusBadRequest, "Invalid percentage values")
+    summary, err := bc.UserBudgetService.GetBudgetSummary(userID)
+    if err != nil {
+        if err.Error() == "user budget not found" {
+            common.SendError(c, http.StatusNotFound, err.Error())
             return
         }
-
-        customAlloc := services.NewCustomAllocation(savings, wants, needs)
-        allocation = &customAlloc
-    }
-    // If no custom percentages provided, allocation will be nil and service will use default
-
-    preview, err := bc.UserBudgetService.CalculateBudgetPreview(income, allocation)
-    if err != nil {
         common.SendError(c, http.StatusBadRequest, err.Error())
         return
     }
 
-    common.SendResponse(c, http.StatusOK, preview, "Budget calculation completed successfully")
+    common.SendResponse(c, http.StatusOK, summary, "Budget summary retrieved successfully")
 }

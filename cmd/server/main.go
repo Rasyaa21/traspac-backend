@@ -79,13 +79,15 @@ func main() {
 
     userRepo := repositories.NewUserRepository(db)
     userTokenRepo := repositories.NewUserTokenRepository(db)
+    userBudgetRepo := repositories.NewUserBudgetRepository(db)
 
+    userBudgetService := services.NewUserBudgetService(userRepo, userBudgetRepo)
     emailTokenService := services.NewEmailVerificationService(userRepo, userTokenRepo, mailer, baseURL)
 
     // ======================================================================
     // 3. Initialize cron scheduler
     // ======================================================================
-    scheduler := cron.NewScheduler(emailTokenService)
+    scheduler := cron.NewScheduler(emailTokenService, userBudgetService)
     scheduler.Start()
     defer scheduler.Stop()
 

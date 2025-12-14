@@ -11,13 +11,15 @@ import (
 type Scheduler struct {
 	cron      *cron.Cron
 	EmailVerificationService  *services.EmailVerficationService
+	UserBudgetService 		 *services.UserBudgetService
 }
 
-func NewScheduler(emailVerificationService *services.EmailVerficationService) *Scheduler {
+func NewScheduler(emailVerificationService *services.EmailVerficationService, userBudgetService *services.UserBudgetService) *Scheduler {
 	c := cron.New(cron.WithSeconds()) 
 
 	s := &Scheduler{
 		cron:     c,
+		UserBudgetService: userBudgetService,
 		EmailVerificationService: emailVerificationService,
 	}
 
@@ -28,6 +30,7 @@ func NewScheduler(emailVerificationService *services.EmailVerficationService) *S
 
 func (s *Scheduler) registerJobs() {
 	s.CleanTokenJobs()
+	s.ClearWeeklyBudget()
 }
 
 func (s *Scheduler) Start() {
