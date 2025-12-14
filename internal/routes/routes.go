@@ -9,4 +9,5 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB) {
 	api := router.Group("/api/v1")
 	SetupUserRoutes(api, db)
 	UserBudgetRoutes(api, db)
+	CategoryRoutes(api, db)
 }

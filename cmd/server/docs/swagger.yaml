@@ -58,6 +58,24 @@ definitions:
     - confirm_password
     - new_password
     type: object
+  gin-backend-app_internal_dto_request.CreateCategoryRequest:
+    properties:
+      category_type:
+        allOf:
+        - $ref: '#/definitions/gin-backend-app_internal_models.CategoryType'
+        example: needs
+      description:
+        example: Daily meals and dining expenses
+        maxLength: 500
+        type: string
+      name:
+        example: Food & Dining
+        maxLength: 100
+        type: string
+    required:
+    - category_type
+    - name
+    type: object
   gin-backend-app_internal_dto_request.CreateUserRequest:
     properties:
       email:
@@ -105,6 +123,21 @@ definitions:
     required:
     - email
     type: object
+  gin-backend-app_internal_dto_request.UpdateCategoryRequest:
+    properties:
+      category_type:
+        allOf:
+        - $ref: '#/definitions/gin-backend-app_internal_models.CategoryType'
+        example: needs
+      description:
+        example: Daily meals and dining expenses
+        maxLength: 500
+        type: string
+      name:
+        example: Food & Dining
+        maxLength: 100
+        type: string
+    type: object
   gin-backend-app_internal_dto_request.VerifyOTPAndEmailRequest:
     properties:
       email:
@@ -117,6 +150,16 @@ definitions:
     - email
     - token_otp
     type: object
+  gin-backend-app_internal_models.CategoryType:
+    enum:
+    - needs
+    - wants
+    - savings
+    type: string
+    x-enum-varnames:
+    - CategoryTypeNeeds
+    - CategoryTypeWants
+    - CategoryTypeSavings
 host: localhost:8080
 info:
   contact:
@@ -506,31 +549,6 @@ paths:
       summary: Update user budget
       tags:
       - Budget Management
-  /budget/analysis:
-    get:
-      consumes:
-      - application/json
-      description: Get detailed analysis of budget allocation with recommendations
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Budget analysis retrieved successfully
-          schema:
-            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
-        "401":
-          description: Authentication required
-          schema:
-            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
-        "404":
-          description: Budget not found
-          schema:
-            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get budget analysis and recommendations
-      tags:
-      - Budget Management
   /budget/calculate:
     get:
       consumes:
@@ -572,6 +590,172 @@ paths:
       summary: Calculate budget preview
       tags:
       - Budget Management
+  /categories:
+    get:
+      consumes:
+      - application/json
+      description: Get all categories for authenticated user
+      parameters:
+      - description: Filter by category type (needs, wants, savings)
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Categories retrieved successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all categories
+      tags:
+      - Categories
+    post:
+      consumes:
+      - application/json
+      description: Create a new category for authenticated user
+      parameters:
+      - description: Category creation data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/gin-backend-app_internal_dto_request.CreateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Category created successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new category
+      tags:
+      - Categories
+  /categories/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete category for authenticated user
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Category deleted successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "400":
+          description: Invalid category ID
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "404":
+          description: Category not found
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete category
+      tags:
+      - Categories
+    get:
+      consumes:
+      - application/json
+      description: Get category details by ID for authenticated user
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Category retrieved successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "400":
+          description: Invalid category ID
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "404":
+          description: Category not found
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get category by ID
+      tags:
+      - Categories
+    put:
+      consumes:
+      - application/json
+      description: Update category for authenticated user
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Category update data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/gin-backend-app_internal_dto_request.UpdateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Category updated successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "404":
+          description: Category not found
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update category
+      tags:
+      - Categories
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

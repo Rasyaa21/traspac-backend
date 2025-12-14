@@ -144,6 +144,10 @@ func setupExtensionsAndEnums(db *gorm.DB) error {
 			values: []string{"income", "expense"},
 		},
 		{
+			name:   "category_type_enum",
+			values: []string{"needs", "wants", "savings"},
+		},
+		{
 			name:   "period_type_enum",
 			values: []string{"weekly", "monthly"},
 		},
@@ -229,16 +233,16 @@ func createCustomIndexes(db *gorm.DB) error {
 			query: "CREATE INDEX IF NOT EXISTS idx_user_budgets_income_weekly ON user_budgets(income_weekly)",
 		},
 
-		// Categories indexes
+		// Categories indexes - FIXED: menggunakan category_type bukan group_type
 		{
 			name:  "idx_categories_user_name_type",
 			table: "categories",
-			query: "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_user_name_type ON categories(user_id, LOWER(name), group_type)",
+			query: "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_user_name_type ON categories(user_id, LOWER(name), category_type)",
 		},
 		{
-			name:  "idx_categories_user_group_type",
+			name:  "idx_categories_user_category_type",
 			table: "categories",
-			query: "CREATE INDEX IF NOT EXISTS idx_categories_user_group_type ON categories(user_id, group_type)",
+			query: "CREATE INDEX IF NOT EXISTS idx_categories_user_category_type ON categories(user_id, category_type)",
 		},
 
 		// Transactions indexes
@@ -292,7 +296,7 @@ func createCustomIndexes(db *gorm.DB) error {
 			query: "CREATE INDEX IF NOT EXISTS idx_ai_logs_category_id ON ai_logs(category_id)",
 		},
 
-		// User Tokens indexes - FIXED untuk struktur baru
+		// User Tokens indexes
 		{
 			name:  "idx_user_tokens_token_otp",
 			table: "user_tokens",

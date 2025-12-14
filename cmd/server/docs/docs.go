@@ -592,46 +592,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/budget/analysis": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get detailed analysis of budget allocation with recommendations",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Budget Management"
-                ],
-                "summary": "Get budget analysis and recommendations",
-                "responses": {
-                    "200": {
-                        "description": "Budget analysis retrieved successfully",
-                        "schema": {
-                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
-                        }
-                    },
-                    "401": {
-                        "description": "Authentication required",
-                        "schema": {
-                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Budget not found",
-                        "schema": {
-                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/budget/calculate": {
             "get": {
                 "description": "Calculate budget allocation preview without saving to database",
@@ -685,6 +645,267 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/categories": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get all categories for authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Get all categories",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by category type (needs, wants, savings)",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Categories retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new category for authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Create a new category",
+                "parameters": [
+                    {
+                        "description": "Category creation data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_request.CreateCategoryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Category created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/categories/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get category details by ID for authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Get category by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Category retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid category ID",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Category not found",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update category for authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Update category",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Category update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_request.UpdateCategoryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Category updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Category not found",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete category for authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Delete category",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Category ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Category deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid category ID",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Category not found",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
                         }
@@ -773,6 +994,33 @@ const docTemplate = `{
                 }
             }
         },
+        "gin-backend-app_internal_dto_request.CreateCategoryRequest": {
+            "type": "object",
+            "required": [
+                "category_type",
+                "name"
+            ],
+            "properties": {
+                "category_type": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/gin-backend-app_internal_models.CategoryType"
+                        }
+                    ],
+                    "example": "needs"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Daily meals and dining expenses"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "Food \u0026 Dining"
+                }
+            }
+        },
         "gin-backend-app_internal_dto_request.CreateUserRequest": {
             "type": "object",
             "required": [
@@ -839,6 +1087,29 @@ const docTemplate = `{
                 }
             }
         },
+        "gin-backend-app_internal_dto_request.UpdateCategoryRequest": {
+            "type": "object",
+            "properties": {
+                "category_type": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/gin-backend-app_internal_models.CategoryType"
+                        }
+                    ],
+                    "example": "needs"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Daily meals and dining expenses"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "Food \u0026 Dining"
+                }
+            }
+        },
         "gin-backend-app_internal_dto_request.VerifyOTPAndEmailRequest": {
             "type": "object",
             "required": [
@@ -855,6 +1126,19 @@ const docTemplate = `{
                     "example": "ABCD12"
                 }
             }
+        },
+        "gin-backend-app_internal_models.CategoryType": {
+            "type": "string",
+            "enum": [
+                "needs",
+                "wants",
+                "savings"
+            ],
+            "x-enum-varnames": [
+                "CategoryTypeNeeds",
+                "CategoryTypeWants",
+                "CategoryTypeSavings"
+            ]
         }
     },
     "securityDefinitions": {
