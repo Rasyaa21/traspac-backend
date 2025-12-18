@@ -58,24 +58,6 @@ definitions:
     - confirm_password
     - new_password
     type: object
-  gin-backend-app_internal_dto_request.CreateCategoryRequest:
-    properties:
-      category_type:
-        allOf:
-        - $ref: '#/definitions/gin-backend-app_internal_models.CategoryType'
-        example: needs
-      description:
-        example: Daily meals and dining expenses
-        maxLength: 500
-        type: string
-      name:
-        example: Food & Dining
-        maxLength: 100
-        type: string
-    required:
-    - category_type
-    - name
-    type: object
   gin-backend-app_internal_dto_request.CreateUserRequest:
     properties:
       email:
@@ -123,21 +105,6 @@ definitions:
     required:
     - email
     type: object
-  gin-backend-app_internal_dto_request.UpdateCategoryRequest:
-    properties:
-      category_type:
-        allOf:
-        - $ref: '#/definitions/gin-backend-app_internal_models.CategoryType'
-        example: needs
-      description:
-        example: Daily meals and dining expenses
-        maxLength: 500
-        type: string
-      name:
-        example: Food & Dining
-        maxLength: 100
-        type: string
-    type: object
   gin-backend-app_internal_dto_request.VerifyOTPAndEmailRequest:
     properties:
       email:
@@ -150,16 +117,6 @@ definitions:
     - email
     - token_otp
     type: object
-  gin-backend-app_internal_models.CategoryType:
-    enum:
-    - needs
-    - wants
-    - savings
-    type: string
-    x-enum-varnames:
-    - CategoryTypeNeeds
-    - CategoryTypeWants
-    - CategoryTypeSavings
 host: localhost:8080
 info:
   contact:
@@ -549,62 +506,75 @@ paths:
       summary: Update user budget
       tags:
       - Budget Management
-  /budget/calculate:
+  /budget/summary:
     get:
       consumes:
       - application/json
-      description: Calculate budget allocation preview without saving to database
-      parameters:
-      - description: Weekly income amount
-        format: float64
-        in: query
-        name: income
-        required: true
-        type: number
-      - description: 'Custom savings percentage (default: 50)'
-        format: float64
-        in: query
-        name: savings_percent
-        type: number
-      - description: 'Custom wants percentage (default: 30)'
-        format: float64
-        in: query
-        name: wants_percent
-        type: number
-      - description: 'Custom needs percentage (default: 20)'
-        format: float64
-        in: query
-        name: needs_percent
-        type: number
+      description: Retrieve detailed budget summary including allocation, usage, and
+        remaining amounts
       produces:
       - application/json
       responses:
         "200":
-          description: Budget calculation completed successfully
+          description: Budget summary retrieved successfully
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
-        "400":
-          description: Invalid parameters
+        "401":
+          description: Authentication required
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
-      summary: Calculate budget preview
+        "404":
+          description: Budget not found
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get detailed budget summary with usage
       tags:
       - Budget Management
-  /categories:
-    get:
+  /ocr/raw-text:
+    post:
       consumes:
-      - application/json
-      description: Get all categories for authenticated user
+      - multipart/form-data
+      description: Extract raw text from image using OCR (Tesseract)
       parameters:
-      - description: Filter by category type (needs, wants, savings)
-        in: query
-        name: type
-        type: string
+      - description: Image file (png/jpg/jpeg)
+        in: formData
+        name: image
+        required: true
+        type: file
       produces:
       - application/json
       responses:
         "200":
-          description: Categories retrieved successfully
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: OCR image to raw text
+      tags:
+      - OCR
+  /transactions:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all transactions for the authenticated user including
+        photos
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Transactions retrieved successfully
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
         "401":
@@ -613,25 +583,54 @@ paths:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get all categories
+      summary: Get all user transactions
       tags:
-      - Categories
+      - Transaction Management
     post:
       consumes:
-      - application/json
-      description: Create a new category for authenticated user
+      - multipart/form-data
+      description: Create a new transaction for the authenticated user with optional
+        photo upload
       parameters:
-      - description: Category creation data
-        in: body
-        name: request
+      - description: Transaction type
+        enum:
+        - income
+        - expense
+        in: formData
+        name: type
         required: true
-        schema:
-          $ref: '#/definitions/gin-backend-app_internal_dto_request.CreateCategoryRequest'
+        type: string
+      - description: Transaction amount (must be greater than 0)
+        in: formData
+        name: amount
+        required: true
+        type: integer
+      - description: Transaction description
+        in: formData
+        name: description
+        type: string
+      - description: Transaction date (YYYY-MM-DDTHH:MM:SSZ format)
+        in: formData
+        name: date
+        required: true
+        type: string
+      - description: Budget category
+        enum:
+        - needs
+        - wants
+        - savings
+        in: formData
+        name: budget_category
+        type: string
+      - description: Transaction photo/receipt (max 5MB, jpg/png/gif/webp)
+        in: formData
+        name: photo
+        type: file
       produces:
       - application/json
       responses:
         "201":
-          description: Category created successfully
+          description: Transaction created successfully
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
         "400":
@@ -642,18 +641,23 @@ paths:
           description: Authentication required
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "404":
+          description: Category not found
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Create a new category
+      summary: Create a new transaction
       tags:
-      - Categories
-  /categories/{id}:
+      - Transaction Management
+  /transactions/{id}:
     delete:
       consumes:
       - application/json
-      description: Delete category for authenticated user
+      description: Delete a specific transaction for the authenticated user including
+        its photo
       parameters:
-      - description: Category ID
+      - description: Transaction ID (UUID format)
         in: path
         name: id
         required: true
@@ -662,11 +666,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: Category deleted successfully
+          description: Transaction deleted successfully
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
         "400":
-          description: Invalid category ID
+          description: Invalid transaction ID
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
         "401":
@@ -674,20 +678,20 @@ paths:
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
         "404":
-          description: Category not found
+          description: Transaction not found
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Delete category
+      summary: Delete a transaction
       tags:
-      - Categories
+      - Transaction Management
     get:
       consumes:
       - application/json
-      description: Get category details by ID for authenticated user
+      description: Get a specific transaction by ID for the authenticated user
       parameters:
-      - description: Category ID
+      - description: Transaction ID (UUID format)
         in: path
         name: id
         required: true
@@ -696,11 +700,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: Category retrieved successfully
+          description: Transaction retrieved successfully
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
         "400":
-          description: Invalid category ID
+          description: Invalid transaction ID
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
         "401":
@@ -708,35 +712,61 @@ paths:
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
         "404":
-          description: Category not found
+          description: Transaction not found
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get category by ID
+      summary: Get transaction by ID
       tags:
-      - Categories
+      - Transaction Management
     put:
       consumes:
-      - application/json
-      description: Update category for authenticated user
+      - multipart/form-data
+      description: Update transaction details for the authenticated user with optional
+        photo upload
       parameters:
-      - description: Category ID
+      - description: Transaction ID (UUID format)
         in: path
         name: id
         required: true
         type: string
-      - description: Category update data
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/gin-backend-app_internal_dto_request.UpdateCategoryRequest'
+      - description: Transaction type
+        enum:
+        - income
+        - expense
+        in: formData
+        name: type
+        type: string
+      - description: Transaction amount (must be greater than 0)
+        in: formData
+        name: amount
+        type: integer
+      - description: Transaction description
+        in: formData
+        name: description
+        type: string
+      - description: Transaction date (YYYY-MM-DDTHH:MM:SSZ format)
+        in: formData
+        name: date
+        type: string
+      - description: Budget category
+        enum:
+        - needs
+        - wants
+        - savings
+        in: formData
+        name: budget_category
+        type: string
+      - description: Transaction photo/receipt (max 5MB, jpg/png/gif/webp)
+        in: formData
+        name: photo
+        type: file
       produces:
       - application/json
       responses:
         "200":
-          description: Category updated successfully
+          description: Transaction updated successfully
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
         "400":
@@ -748,14 +778,50 @@ paths:
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
         "404":
-          description: Category not found
+          description: Transaction not found
           schema:
             $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Update category
+      summary: Update an existing transaction
       tags:
-      - Categories
+      - Transaction Management
+  /transactions/period:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve transactions grouped by specified period (daily, weekly,
+        monthly)
+      parameters:
+      - description: Period type
+        enum:
+        - daily
+        - weekly
+        - monthly
+        in: query
+        name: period_type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Transactions by period retrieved successfully
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.Response'
+        "400":
+          description: Invalid query parameters
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+        "401":
+          description: Authentication required
+          schema:
+            $ref: '#/definitions/gin-backend-app_internal_dto_common.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get transactions by period
+      tags:
+      - Transaction Management
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

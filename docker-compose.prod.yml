@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -8,11 +8,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -20,33 +18,16 @@ services:
       timeout: 5s
       start_period: 30s
     networks:
-      - traspac_network
-    restart: unless-stopped
-
-  redis:
-    image: redis:7-alpine
-    container_name: ${REDIS_CONTAINER_NAME}
-    ports:
-      - "${REDIS_PORT}:6379"
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      retries: 5
-      timeout: 3s
-      start_period: 30s
-    networks:
-      - traspac_network
+      - private
     restart: unless-stopped
 
   app:
     build:
       context: .
       dockerfile: docker/Dockerfile
+    container_name: ${APP_CONTAINER_NAME:-traspac-backend-app}
     ports:
-      - "${PORT}:8080"
+      - "${PORT}:8080" 
     environment:
       # Database
       - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?sslmode=disable
@@ -55,20 +36,15 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
-      
-      # Redis
-      - REDIS_URL=redis://redis:6379
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      
+
       # App Config
-      - PORT=${PORT}
+      - PORT=8080
       - JWT_SECRET=${JWT_SECRET}
       - ENV=${ENV}
       - GIN_MODE=${GIN_MODE}
       - BASE_URL=${BASE_URL}
-      
-      # SMTP Configuration
+
+      # SMTP
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT}
       - SMTP_USER=${SMTP_USER}
@@ -76,26 +52,37 @@ services:
       - SMTP_FROM_NAME=${SMTP_FROM_NAME}
       - SMTP_SECURITY=${SMTP_SECURITY}
 
-      # Object Storage Configuration (Cloudflare R2)
+      # Object Storage (Cloudflare R2)
       - R2_BUCKET_NAME=${R2_BUCKET_NAME}
       - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
       - R2_KEY_ID=${R2_KEY_ID}
       - ACCESS_KEY_SECRET=${ACCESS_KEY_SECRET}
       - OBJECT_STORAGE_URL=${OBJECT_STORAGE_URL}
+
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
+
     networks:
-      - traspac_network
+      - public
+      - private
+
     restart: unless-stopped
+
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: ${HEALTH_CHECK_INTERVAL}
-      timeout: ${HEALTH_CHECK_TIMEOUT}
-      retries: ${HEALTH_CHECK_RETRIES}
-      start_period: ${HEALTH_CHECK_START_PERIOD}
+      interval: ${HEALTH_CHECK_INTERVAL:-10s}
+      timeout: ${HEALTH_CHECK_TIMEOUT:-3s}
+      retries: ${HEALTH_CHECK_RETRIES:-5}
+      start_period: ${HEALTH_CHECK_START_PERIOD:-20s}
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -111,7 +98,8 @@ services:
     depends_on:
       - postgres
     networks:
-      - traspac_network
+      - public
+      - private
     restart: unless-stopped
 
 volumes:
@@ -119,9 +107,10 @@ volumes:
     driver: local
   pgadmin_data:
     driver: local
-  redis_data:
-    driver: local
 
 networks:
-  traspac_network:
+  public:
     driver: bridge
+  private:
+    driver: bridge
+    internal: true

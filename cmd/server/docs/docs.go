@@ -592,9 +592,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/budget/calculate": {
+        "/budget/summary": {
             "get": {
-                "description": "Calculate budget allocation preview without saving to database",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve detailed budget summary including allocation, usage, and remaining amounts",
                 "consumes": [
                     "application/json"
                 ],
@@ -604,47 +609,22 @@ const docTemplate = `{
                 "tags": [
                     "Budget Management"
                 ],
-                "summary": "Calculate budget preview",
-                "parameters": [
-                    {
-                        "type": "number",
-                        "format": "float64",
-                        "description": "Weekly income amount",
-                        "name": "income",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "number",
-                        "format": "float64",
-                        "description": "Custom savings percentage (default: 50)",
-                        "name": "savings_percent",
-                        "in": "query"
-                    },
-                    {
-                        "type": "number",
-                        "format": "float64",
-                        "description": "Custom wants percentage (default: 30)",
-                        "name": "wants_percent",
-                        "in": "query"
-                    },
-                    {
-                        "type": "number",
-                        "format": "float64",
-                        "description": "Custom needs percentage (default: 20)",
-                        "name": "needs_percent",
-                        "in": "query"
-                    }
-                ],
+                "summary": "Get detailed budget summary with usage",
                 "responses": {
                     "200": {
-                        "description": "Budget calculation completed successfully",
+                        "description": "Budget summary retrieved successfully",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
                         }
                     },
-                    "400": {
-                        "description": "Invalid parameters",
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Budget not found",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
                         }
@@ -652,14 +632,61 @@ const docTemplate = `{
                 }
             }
         },
-        "/categories": {
+        "/ocr/raw-text": {
+            "post": {
+                "description": "Extract raw text from image using OCR (Tesseract)",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "OCR"
+                ],
+                "summary": "OCR image to raw text",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Image file (png/jpg/jpeg)",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/transactions": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get all categories for authenticated user",
+                "description": "Retrieve all transactions for the authenticated user including photos",
                 "consumes": [
                     "application/json"
                 ],
@@ -667,20 +694,12 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Categories"
+                    "Transaction Management"
                 ],
-                "summary": "Get all categories",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Filter by category type (needs, wants, savings)",
-                        "name": "type",
-                        "in": "query"
-                    }
-                ],
+                "summary": "Get all user transactions",
                 "responses": {
                     "200": {
-                        "description": "Categories retrieved successfully",
+                        "description": "Transactions retrieved successfully",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
                         }
@@ -699,7 +718,103 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new category for authenticated user",
+                "description": "Create a new transaction for the authenticated user with optional photo upload",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Transaction Management"
+                ],
+                "summary": "Create a new transaction",
+                "parameters": [
+                    {
+                        "enum": [
+                            "income",
+                            "expense"
+                        ],
+                        "type": "string",
+                        "description": "Transaction type",
+                        "name": "type",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Transaction amount (must be greater than 0)",
+                        "name": "amount",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Transaction description",
+                        "name": "description",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Transaction date (YYYY-MM-DDTHH:MM:SSZ format)",
+                        "name": "date",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "needs",
+                            "wants",
+                            "savings"
+                        ],
+                        "type": "string",
+                        "description": "Budget category",
+                        "name": "budget_category",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Transaction photo/receipt (max 5MB, jpg/png/gif/webp)",
+                        "name": "photo",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Transaction created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Category not found",
+                        "schema": {
+                            "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/transactions/period": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve transactions grouped by specified period (daily, weekly, monthly)",
                 "consumes": [
                     "application/json"
                 ],
@@ -707,29 +822,32 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Categories"
+                    "Transaction Management"
                 ],
-                "summary": "Create a new category",
+                "summary": "Get transactions by period",
                 "parameters": [
                     {
-                        "description": "Category creation data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/gin-backend-app_internal_dto_request.CreateCategoryRequest"
-                        }
+                        "enum": [
+                            "daily",
+                            "weekly",
+                            "monthly"
+                        ],
+                        "type": "string",
+                        "description": "Period type",
+                        "name": "period_type",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Category created successfully",
+                    "200": {
+                        "description": "Transactions by period retrieved successfully",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
                         }
                     },
                     "400": {
-                        "description": "Invalid request data",
+                        "description": "Invalid query parameters",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
                         }
@@ -743,14 +861,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/categories/{id}": {
+        "/transactions/{id}": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get category details by ID for authenticated user",
+                "description": "Get a specific transaction by ID for the authenticated user",
                 "consumes": [
                     "application/json"
                 ],
@@ -758,13 +876,13 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Categories"
+                    "Transaction Management"
                 ],
-                "summary": "Get category by ID",
+                "summary": "Get transaction by ID",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Category ID",
+                        "description": "Transaction ID (UUID format)",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -772,13 +890,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Category retrieved successfully",
+                        "description": "Transaction retrieved successfully",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
                         }
                     },
                     "400": {
-                        "description": "Invalid category ID",
+                        "description": "Invalid transaction ID",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
                         }
@@ -790,7 +908,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Category not found",
+                        "description": "Transaction not found",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
                         }
@@ -803,38 +921,74 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Update category for authenticated user",
+                "description": "Update transaction details for the authenticated user with optional photo upload",
                 "consumes": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Categories"
+                    "Transaction Management"
                 ],
-                "summary": "Update category",
+                "summary": "Update an existing transaction",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Category ID",
+                        "description": "Transaction ID (UUID format)",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Category update data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/gin-backend-app_internal_dto_request.UpdateCategoryRequest"
-                        }
+                        "enum": [
+                            "income",
+                            "expense"
+                        ],
+                        "type": "string",
+                        "description": "Transaction type",
+                        "name": "type",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Transaction amount (must be greater than 0)",
+                        "name": "amount",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Transaction description",
+                        "name": "description",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Transaction date (YYYY-MM-DDTHH:MM:SSZ format)",
+                        "name": "date",
+                        "in": "formData"
+                    },
+                    {
+                        "enum": [
+                            "needs",
+                            "wants",
+                            "savings"
+                        ],
+                        "type": "string",
+                        "description": "Budget category",
+                        "name": "budget_category",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Transaction photo/receipt (max 5MB, jpg/png/gif/webp)",
+                        "name": "photo",
+                        "in": "formData"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Category updated successfully",
+                        "description": "Transaction updated successfully",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
                         }
@@ -852,7 +1006,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Category not found",
+                        "description": "Transaction not found",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
                         }
@@ -865,7 +1019,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete category for authenticated user",
+                "description": "Delete a specific transaction for the authenticated user including its photo",
                 "consumes": [
                     "application/json"
                 ],
@@ -873,13 +1027,13 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Categories"
+                    "Transaction Management"
                 ],
-                "summary": "Delete category",
+                "summary": "Delete a transaction",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Category ID",
+                        "description": "Transaction ID (UUID format)",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -887,13 +1041,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Category deleted successfully",
+                        "description": "Transaction deleted successfully",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.Response"
                         }
                     },
                     "400": {
-                        "description": "Invalid category ID",
+                        "description": "Invalid transaction ID",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
                         }
@@ -905,7 +1059,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Category not found",
+                        "description": "Transaction not found",
                         "schema": {
                             "$ref": "#/definitions/gin-backend-app_internal_dto_common.ErrorResponse"
                         }
@@ -994,33 +1148,6 @@ const docTemplate = `{
                 }
             }
         },
-        "gin-backend-app_internal_dto_request.CreateCategoryRequest": {
-            "type": "object",
-            "required": [
-                "category_type",
-                "name"
-            ],
-            "properties": {
-                "category_type": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/gin-backend-app_internal_models.CategoryType"
-                        }
-                    ],
-                    "example": "needs"
-                },
-                "description": {
-                    "type": "string",
-                    "maxLength": 500,
-                    "example": "Daily meals and dining expenses"
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "example": "Food \u0026 Dining"
-                }
-            }
-        },
         "gin-backend-app_internal_dto_request.CreateUserRequest": {
             "type": "object",
             "required": [
@@ -1087,29 +1214,6 @@ const docTemplate = `{
                 }
             }
         },
-        "gin-backend-app_internal_dto_request.UpdateCategoryRequest": {
-            "type": "object",
-            "properties": {
-                "category_type": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/gin-backend-app_internal_models.CategoryType"
-                        }
-                    ],
-                    "example": "needs"
-                },
-                "description": {
-                    "type": "string",
-                    "maxLength": 500,
-                    "example": "Daily meals and dining expenses"
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "example": "Food \u0026 Dining"
-                }
-            }
-        },
         "gin-backend-app_internal_dto_request.VerifyOTPAndEmailRequest": {
             "type": "object",
             "required": [
@@ -1126,19 +1230,6 @@ const docTemplate = `{
                     "example": "ABCD12"
                 }
             }
-        },
-        "gin-backend-app_internal_models.CategoryType": {
-            "type": "string",
-            "enum": [
-                "needs",
-                "wants",
-                "savings"
-            ],
-            "x-enum-varnames": [
-                "CategoryTypeNeeds",
-                "CategoryTypeWants",
-                "CategoryTypeSavings"
-            ]
         }
     },
     "securityDefinitions": {

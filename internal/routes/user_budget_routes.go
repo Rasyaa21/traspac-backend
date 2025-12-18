@@ -18,17 +18,13 @@ func UserBudgetRoutes(api *gin.RouterGroup, db *gorm.DB) {
 	userBudgetService := services.NewUserBudgetService(userRepo, userBudgetRepo)
 	userBudgetController := controllers.NewUserBudgetController(userBudgetService)
 	{
-		// Public route for budget calculation preview
-		budgetGroup.GET("/calculate", userBudgetController.CalculateBudget)
-
-		// Protected routes - require authentication
 		budgetGroup.Use(middleware.AuthMiddleware())
 		{
-			// Separated budget operations
-			budgetGroup.POST("", userBudgetController.CreateUserBudget)    // Create new budget
-			budgetGroup.PUT("", userBudgetController.UpdateUserBudget)     // Update existing budget
-			budgetGroup.GET("", userBudgetController.GetUserBudget)        // Get budget details
-			budgetGroup.DELETE("", userBudgetController.DeleteUserBudget)  // Delete budget
+			budgetGroup.POST("", userBudgetController.CreateUserBudget)    
+			budgetGroup.PUT("", userBudgetController.UpdateUserBudget)     
+			budgetGroup.GET("", userBudgetController.GetUserBudget)        
+			budgetGroup.DELETE("", userBudgetController.DeleteUserBudget)  
+			budgetGroup.GET("/summary", userBudgetController.GetBudgetSummary)    
 		}
 	}
 }

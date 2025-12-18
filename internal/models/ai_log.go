@@ -17,10 +17,8 @@ type AILog struct {
     OutputData    map[string]interface{} `json:"output_data" gorm:"type:jsonb"`
     CreatedAt     time.Time              `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`
 
-    // Relations
     User        User         `json:"user" gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
     Transaction *Transaction `json:"transaction,omitempty" gorm:"foreignKey:TransactionID;references:ID;constraint:OnDelete:SET NULL"`
-    Category    *Category    `json:"category,omitempty" gorm:"foreignKey:CategoryID;references:ID;constraint:OnDelete:SET NULL"`
 }
 
 func (AILog) TableName() string {

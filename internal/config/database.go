@@ -102,7 +102,6 @@ func InitDatabase() (*gorm.DB, error) {
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.UserBudget{},
-		&models.Category{},
 		&models.Transaction{},
 		&models.PeriodReport{},
 		&models.AILog{},
@@ -232,17 +231,10 @@ func createCustomIndexes(db *gorm.DB) error {
 			table: "user_budgets",
 			query: "CREATE INDEX IF NOT EXISTS idx_user_budgets_income_weekly ON user_budgets(income_weekly)",
 		},
-
-		// Categories indexes - FIXED: menggunakan category_type bukan group_type
 		{
-			name:  "idx_categories_user_name_type",
-			table: "categories",
-			query: "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_user_name_type ON categories(user_id, LOWER(name), category_type)",
-		},
-		{
-			name:  "idx_categories_user_category_type",
-			table: "categories",
-			query: "CREATE INDEX IF NOT EXISTS idx_categories_user_category_type ON categories(user_id, category_type)",
+			name:  "idx_user_budgets_usage",
+			table: "user_budgets",
+			query: "CREATE INDEX IF NOT EXISTS idx_user_budgets_usage ON user_budgets(needs_used, wants_used, savings_used)",
 		},
 
 		// Transactions indexes
@@ -252,14 +244,14 @@ func createCustomIndexes(db *gorm.DB) error {
 			query: "CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions(user_id, date DESC)",
 		},
 		{
-			name:  "idx_transactions_user_category_date",
-			table: "transactions",
-			query: "CREATE INDEX IF NOT EXISTS idx_transactions_user_category_date ON transactions(user_id, category_id, date DESC)",
-		},
-		{
 			name:  "idx_transactions_user_type_date",
 			table: "transactions",
 			query: "CREATE INDEX IF NOT EXISTS idx_transactions_user_type_date ON transactions(user_id, type, date DESC)",
+		},
+		{
+			name:  "idx_transactions_budget_category",
+			table: "transactions",
+			query: "CREATE INDEX IF NOT EXISTS idx_transactions_budget_category ON transactions(user_id, budget_category, date DESC)",
 		},
 
 		// Period Reports indexes
@@ -289,11 +281,6 @@ func createCustomIndexes(db *gorm.DB) error {
 			name:  "idx_ai_logs_transaction_id",
 			table: "ai_logs",
 			query: "CREATE INDEX IF NOT EXISTS idx_ai_logs_transaction_id ON ai_logs(transaction_id)",
-		},
-		{
-			name:  "idx_ai_logs_category_id",
-			table: "ai_logs",
-			query: "CREATE INDEX IF NOT EXISTS idx_ai_logs_category_id ON ai_logs(category_id)",
 		},
 
 		// User Tokens indexes

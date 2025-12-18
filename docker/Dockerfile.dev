@@ -1,0 +1,20 @@
+FROM golang:1.24-alpine
+
+RUN apk add --no-cache git ca-certificates tzdata curl \
+    tesseract-ocr
+
+RUN mkdir -p /usr/share/tessdata && \
+    curl -L -o /usr/share/tessdata/ind.traineddata \
+    https://github.com/tesseract-ocr/tessdata/raw/main/ind.traineddata
+
+WORKDIR /app
+
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+EXPOSE 8080
+
+CMD ["go", "run", "./cmd/server/main.go"]
