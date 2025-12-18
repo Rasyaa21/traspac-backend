@@ -102,7 +102,6 @@ func InitDatabase() (*gorm.DB, error) {
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.UserBudget{},
-		&models.Category{},
 		&models.Transaction{},
 		&models.PeriodReport{},
 		&models.AILog{},
@@ -238,33 +237,11 @@ func createCustomIndexes(db *gorm.DB) error {
 			query: "CREATE INDEX IF NOT EXISTS idx_user_budgets_usage ON user_budgets(needs_used, wants_used, savings_used)",
 		},
 
-		// Categories indexes - Removed category_type references
-		{
-			name:  "idx_categories_user_name",
-			table: "categories",
-			query: "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_user_name ON categories(user_id, LOWER(name))",
-		},
-		{
-			name:  "idx_categories_user_id",
-			table: "categories",
-			query: "CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id)",
-		},
-		{
-			name:  "idx_categories_is_default",
-			table: "categories",
-			query: "CREATE INDEX IF NOT EXISTS idx_categories_is_default ON categories(user_id, is_default)",
-		},
-
 		// Transactions indexes
 		{
 			name:  "idx_transactions_user_date",
 			table: "transactions",
 			query: "CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions(user_id, date DESC)",
-		},
-		{
-			name:  "idx_transactions_user_category_date",
-			table: "transactions",
-			query: "CREATE INDEX IF NOT EXISTS idx_transactions_user_category_date ON transactions(user_id, category_id, date DESC)",
 		},
 		{
 			name:  "idx_transactions_user_type_date",
@@ -304,11 +281,6 @@ func createCustomIndexes(db *gorm.DB) error {
 			name:  "idx_ai_logs_transaction_id",
 			table: "ai_logs",
 			query: "CREATE INDEX IF NOT EXISTS idx_ai_logs_transaction_id ON ai_logs(transaction_id)",
-		},
-		{
-			name:  "idx_ai_logs_category_id",
-			table: "ai_logs",
-			query: "CREATE INDEX IF NOT EXISTS idx_ai_logs_category_id ON ai_logs(category_id)",
 		},
 
 		// User Tokens indexes

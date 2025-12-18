@@ -20,6 +20,7 @@ type PeriodType string
 const (
 	PeriodWeekly  PeriodType = "weekly"
 	PeriodMonthly PeriodType = "monthly"
+	PeriodDaily PeriodType = "daily"
 )
 
 type AiAnalysisType string

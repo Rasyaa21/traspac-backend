@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
@@ -16,6 +18,7 @@ import (
 	"gin-backend-app/internal/routes"
 	"gin-backend-app/internal/services"
 	"gin-backend-app/pkg/utils"
+	customValidator "gin-backend-app/pkg/validator"
 )
 
 // @title Traspac Backend API
@@ -34,126 +37,135 @@ import (
 // @name Authorization
 // @description Type "Bearer" followed by a space and JWT token.
 func main() {
-    // Set Gin mode based on environment
-    if os.Getenv("ENV") == "production" {
-        gin.SetMode(gin.ReleaseMode)
-    }
+	// Set Gin mode based on environment
+	if os.Getenv("ENV") == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
-    log.Println("🚀 Starting Traspac Backend...")
+	log.Println("🚀 Starting Traspac Backend...")
 
-    // ======================================================================
-    // 1. Initialize database
-    // ======================================================================
-    log.Println("📦 Initializing database connection...")
-    db, err := config.InitDatabase()
-    if err != nil {
-        log.Fatal("❌ Failed to connect to database:", err)
-    }
+	// ======================================================================
+	// 0. Setup custom validators
+	// ======================================================================
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		v.RegisterValidation("password_strength", customValidator.ValidatePasswordStrength)
+	}
 
-    sqlDB, err := db.DB()
-    if err != nil {
-        log.Fatal("❌ Failed to get SQL DB instance:", err)
-    }
-    defer func() {
-        if err := sqlDB.Close(); err != nil {
-            log.Printf("❌ Error closing database connection: %v", err)
-        } else {
-            log.Println("✅ Database connection closed successfully")
-        }
-    }()
+	// ======================================================================
+	// 1. Initialize database
+	// ======================================================================
+	log.Println("📦 Initializing database connection...")
+	db, err := config.InitDatabase()
+	if err != nil {
+		log.Fatal("❌ Failed to connect to database:", err)
+	}
 
-    // Test database connection
-    if err := sqlDB.Ping(); err != nil {
-        log.Fatal("❌ Failed to ping database:", err)
-    }
-    log.Println("✅ Database connected and ping successful")
-    log.Printf("📊 Database Stats - Max Open Connections: %d", sqlDB.Stats().MaxOpenConnections)
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatal("❌ Failed to get SQL DB instance:", err)
+	}
+	defer func() {
+		if err := sqlDB.Close(); err != nil {
+			log.Printf("❌ Error closing database connection: %v", err)
+		} else {
+			log.Println("✅ Database connection closed successfully")
+		}
+	}()
 
-    // ======================================================================
-    // 2. Initialize repositories & services
-    // ======================================================================
+	// Test database connection
+	if err := sqlDB.Ping(); err != nil {
+		log.Fatal("❌ Failed to ping database:", err)
+	}
+	log.Println("✅ Database connected and ping successful")
+	log.Printf("📊 Database Stats - Max Open Connections: %d", sqlDB.Stats().MaxOpenConnections)
+
+	// ======================================================================
+	// 2. Initialize repositories & services
+	// ======================================================================
 
 	baseURL := os.Getenv("BASE_URL")
 	mailer := utils.NewSMTPMailerFromEnv()
 
+	userRepo := repositories.NewUserRepository(db)
+	userTokenRepo := repositories.NewUserTokenRepository(db)
+	userBudgetRepo := repositories.NewUserBudgetRepository(db)
 
-    userRepo := repositories.NewUserRepository(db)
-    userTokenRepo := repositories.NewUserTokenRepository(db)
-    userBudgetRepo := repositories.NewUserBudgetRepository(db)
+	userBudgetService := services.NewUserBudgetService(userRepo, userBudgetRepo)
+	emailTokenService := services.NewEmailVerificationService(userRepo, userTokenRepo, mailer, baseURL)
 
-    userBudgetService := services.NewUserBudgetService(userRepo, userBudgetRepo)
-    emailTokenService := services.NewEmailVerificationService(userRepo, userTokenRepo, mailer, baseURL)
+	// ======================================================================
+	// 3. Initialize cron scheduler
+	// ======================================================================
+	scheduler := cron.NewScheduler(emailTokenService, userBudgetService)
+	scheduler.Start()
+	defer scheduler.Stop()
 
-    // ======================================================================
-    // 3. Initialize cron scheduler
-    // ======================================================================
-    scheduler := cron.NewScheduler(emailTokenService, userBudgetService)
-    scheduler.Start()
-    defer scheduler.Stop()
+	// ======================================================================
+	// 4. Setup Gin router & routes
+	// ======================================================================
+	router := gin.Default()
+	log.Println("🌐 Gin router initialized")
 
-    // ======================================================================
-    // 4. Setup Gin router & routes
-    // ======================================================================
-    router := gin.Default()
-    log.Println("🌐 Gin router initialized")
+	// Basic health check
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "up",
+			"service": "traspac-backend",
+		})
+	})
 
-    // Basic health check
-    router.GET("/health", func(c *gin.Context) {
-        c.JSON(http.StatusOK, gin.H{
-            "status":  "up",
-            "service": "traspac-backend",
-        })
-    })
+	// Database health check
+	router.GET("/health/db", func(c *gin.Context) {
+		if err := sqlDB.Ping(); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"status":   "down",
+				"database": "disconnected",
+				"error":    err.Error(),
+			})
+			return
+		}
 
-    // Database health check
-    router.GET("/health/db", func(c *gin.Context) {
-        if err := sqlDB.Ping(); err != nil {
-            c.JSON(http.StatusServiceUnavailable, gin.H{
-                "status":   "down",
-                "database": "disconnected",
-                "error":    err.Error(),
-            })
-            return
-        }
+		c.JSON(http.StatusOK, gin.H{
+			"status":   "up",
+			"database": "connected",
+			"service":  "traspac-backend",
+		})
+	})
 
-        c.JSON(http.StatusOK, gin.H{
-            "status":   "up",
-            "database": "connected",
-            "service":  "traspac-backend",
-        })
-    })
+	// Root endpoint
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Welcome to Traspac Backend API",
+			"version": "v1.0.0",
+			"status":  "running",
+			"docs":    "/swagger/index.html",
+		})
+	})
 
-    // Root endpoint
-    router.GET("/", func(c *gin.Context) {
-        c.JSON(http.StatusOK, gin.H{
-            "message": "Welcome to Traspac Backend API",
-            "version": "v1.0.0",
-            "status":  "running",
-            "docs":    "/swagger/index.html",
-        })
-    })
+	// API routes
+	routes.SetupRoutes(router, db)
 
-    // API routes
-    routes.SetupRoutes(router, db)
-    log.Println("🛣️ Routes configured successfully")
 
-    // Swagger docs
-    router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+	log.Println("🛣️ Routes configured successfully")
 
-    // ======================================================================
-    // 5. Start HTTP server
-    // ======================================================================
-    port := os.Getenv("PORT")
-    if port == "" {
-        port = "8080"
-    }
+	// Swagger docs
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
-    log.Printf("🌟 Server starting on port :%s", port)
-    log.Printf("🔗 Health check: http://localhost:%s/health", port)
-    log.Printf("🔗 DB Health check: http://localhost:%s/health/db", port)
-    log.Printf("📚 Swagger docs: http://localhost:%s/swagger/index.html", port)
+	// ======================================================================
+	// 5. Start HTTP server
+	// ======================================================================
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 
-    if err := router.Run(":" + port); err != nil {
-        log.Fatalf("❌ Failed to run server: %v", err)
-    }
+	log.Printf("🌟 Server starting on port :%s", port)
+	log.Printf("🔗 Health check: http://localhost:%s/health", port)
+	log.Printf("🔗 DB Health check: http://localhost:%s/health/db", port)
+	log.Printf("📚 Swagger docs: http://localhost:%s/swagger/index.html", port)
+	log.Printf("🔍 OCR endpoint: http://localhost:%s/api/v1/ocr/raw-text", port)
+
+	if err := router.Run(":" + port); err != nil {
+		log.Fatalf("❌ Failed to run server: %v", err)
+	}
 }

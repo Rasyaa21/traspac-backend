@@ -22,7 +22,6 @@ type UserBudget struct {
 	WantsUsed   int64 `json:"wants_used" gorm:"type:bigint;not null;default:0"`
 	SavingsUsed int64 `json:"savings_used" gorm:"type:bigint;not null;default:0"`
 
-	// Savings budget for the week (naming mengikuti schema lu)
 	SavedMoney int64 `json:"saved_money" gorm:"type:bigint;not null;default:0"`
 
 	CreatedAt time.Time `json:"created_at"`
