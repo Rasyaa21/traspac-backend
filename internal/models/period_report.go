@@ -4,18 +4,17 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
 type PeriodReport struct {
     ID              uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
     UserID          uuid.UUID `json:"user_id" gorm:"type:uuid;not null;index"`
-	PeriodType 		PeriodType `gorm:"type:period_type_enum;not null"`
     PeriodStart       time.Time `json:"period_start" gorm:"type:date;not null"`
-    PeriodEnd         time.Time `json:"period_end" gorm:"type:date;not null"`
-    ReportData      map[string]interface{} `json:"report_data" gorm:"type:jsonb"`
-    TotalIncome     float64   `json:"total_income" gorm:"type:decimal(15,2);default:0"`
-    TotalExpense    float64   `json:"total_expense" gorm:"type:decimal(15,2);default:0"`
+    PeriodEnd        time.Time `json:"period_end" gorm:"type:date;not null"`
+    PdfReport       *string `json:"pdf_report" gorm:"type:string"`
+    ReportData datatypes.JSON `json:"report_data" gorm:"type:jsonb;not null"`
     GeneratedAt     time.Time `json:"generated_at" gorm:"default:CURRENT_TIMESTAMP"`
     CreatedAt       time.Time `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`
     UpdatedAt       time.Time `json:"updated_at" gorm:"default:CURRENT_TIMESTAMP"`

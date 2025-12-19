@@ -48,8 +48,6 @@ func SetupUserRoutes(api *gin.RouterGroup, db *gorm.DB) {
 			protected.POST("/verify-email", userEmailVerificationController.VerifyEmail)
 			protected.POST("/resend-verification", userEmailVerificationController.ResendEmailVerification)
 			protected.GET("/verification-status", userEmailVerificationController.CheckVerificationStatus)
-
-
 		}
 	}
 }

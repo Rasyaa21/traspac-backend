@@ -36,3 +36,15 @@ type GetByCategoryResponse struct {
 	Items []CategoryPeriodSummary `json:"items"`
 	Total TransactionSummary      `json:"total"`
 }
+
+type TransactionResponse struct {
+	ID            uuid.UUID             `json:"id"`
+	UserID        uuid.UUID             `json:"user_id"`
+	Type          models.TransactionGroupType `json:"type"`
+	Amount        float64               `json:"amount"`
+	Description   *string               `json:"description,omitempty"`
+	Photo         *string               `json:"photo,omitempty"`
+	Date          time.Time             `json:"date"`
+	BudgetCategory *models.CategoryType  `json:"budget_category,omitempty"`
+	CreatedAt     time.Time             `json:"created_at"`
+}

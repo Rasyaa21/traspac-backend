@@ -32,7 +32,7 @@ func NewTransactionController(transactionService *services.TransactionService) *
 // @Param type formData string true "Transaction type" Enums(income, expense)
 // @Param amount formData integer true "Transaction amount (must be greater than 0)"
 // @Param description formData string false "Transaction description"
-// @Param date formData string true "Transaction date (YYYY-MM-DDTHH:MM:SSZ format)"
+// @Param date formData string true "Transaction date (YYYY-MM-DD format)"
 // @Param budget_category formData string false "Budget category" Enums(needs, wants, savings)
 // @Param photo formData file false "Transaction photo/receipt (max 5MB, jpg/png/gif/webp)"
 // @Success 201 {object} common.Response "Transaction created successfully"
@@ -50,27 +50,23 @@ func (tc *TransactionController) CreateTransaction(c *gin.Context) {
 		return
 	}
 
-	// Use ShouldBind for multipart form data
 	if err := c.ShouldBind(&req); err != nil {
 		common.SendError(c, http.StatusBadRequest, "Invalid request data: "+err.Error())
 		return
 	}
 
-	// Validate photo if uploaded
 	if req.Photo != nil {
 		if !utils.IsValidImageFile(req.Photo) {
 			common.SendError(c, http.StatusBadRequest, "Invalid photo format. Only JPEG, PNG, GIF, and WebP are allowed")
 			return
 		}
 
-		// Check file size (max 5MB)
 		if req.Photo.Size > 5*1024*1024 {
 			common.SendError(c, http.StatusBadRequest, "Photo size must be less than 5MB")
 			return
 		}
 	}
 
-	// Create photo path: user/transaction/:userId
 	photoPath := "user/transaction/" + userID.String()
 
 	transaction, err := tc.TransactionService.CreateTransaction(userID, &req, photoPath)
@@ -139,7 +135,7 @@ func (tc *TransactionController) GetTransactionByID(c *gin.Context) {
 // @Param type formData string false "Transaction type" Enums(income, expense)
 // @Param amount formData integer false "Transaction amount (must be greater than 0)"
 // @Param description formData string false "Transaction description"
-// @Param date formData string false "Transaction date (YYYY-MM-DDTHH:MM:SSZ format)"
+// @Param date formData string false "Transaction date (YYYY-MM-DD format)"
 // @Param budget_category formData string false "Budget category" Enums(needs, wants, savings)
 // @Param photo formData file false "Transaction photo/receipt (max 5MB, jpg/png/gif/webp)"
 // @Success 200 {object} common.Response "Transaction updated successfully"

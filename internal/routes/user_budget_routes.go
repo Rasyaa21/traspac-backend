@@ -18,7 +18,7 @@ func UserBudgetRoutes(api *gin.RouterGroup, db *gorm.DB) {
 	userBudgetService := services.NewUserBudgetService(userRepo, userBudgetRepo)
 	userBudgetController := controllers.NewUserBudgetController(userBudgetService)
 	{
-		budgetGroup.Use(middleware.AuthMiddleware())
+		budgetGroup.Use(middleware.AuthMiddleware(), middleware.RequireEmailVerified())
 		{
 			budgetGroup.POST("", userBudgetController.CreateUserBudget)    
 			budgetGroup.PUT("", userBudgetController.UpdateUserBudget)     

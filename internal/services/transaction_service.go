@@ -43,9 +43,9 @@ func NewTransactionService(
 // CreateTransaction - Creates a new transaction for user
 // Tujuan: Membuat transaksi baru untuk user dengan validasi dan budget update, termasuk photo upload
 // Parameter: userID (uuid.UUID), req (*request.TransactionRequest), photoPath (string) - path untuk storage photo
-// Return: (*models.Transaction, error) - transaksi yang dibuat atau error jika gagal
+// Return: (*response.TransactionResponse, error) - transaksi yang dibuat atau error jika gagal
 // Penjelasan: Validasi user sebelum membuat transaksi baru, upload photo jika ada, kemudian update budget jika expense
-func (s *TransactionService) CreateTransaction(userID uuid.UUID, req *request.TransactionRequest, photoPath string) (*models.Transaction, error) {
+func (s *TransactionService) CreateTransaction(userID uuid.UUID, req *request.TransactionRequest, photoPath string) (*response.TransactionResponse, error) {
 	// Validate user exists
 	_, err := s.UserRepo.FindByID(userID)
 	if err != nil {
@@ -76,7 +76,7 @@ func (s *TransactionService) CreateTransaction(userID uuid.UUID, req *request.Tr
 		}
 	}
 
-	createdTransaction, err := s.TransactionRepo.CreateTransaction(transaction)
+	transaction, err = s.TransactionRepo.CreateTransaction(transaction)
 	if err != nil {
 		return nil, err
 	}
@@ -93,15 +93,28 @@ func (s *TransactionService) CreateTransaction(userID uuid.UUID, req *request.Tr
 		}
 	}
 
-	return createdTransaction, nil
+	// Convert to response format
+	res := &response.TransactionResponse{
+		ID:             transaction.ID,
+		UserID:         transaction.UserID,
+		Type:           transaction.Type,
+		Amount:         float64(transaction.Amount),
+		Description:    transaction.Description,
+		Photo:          transaction.Photo,
+		Date:           transaction.Date,
+		BudgetCategory: transaction.BudgetCategory,
+		CreatedAt:      transaction.CreatedAt,
+	}
+
+	return res, nil
 }
 
 // GetTransactionByID - Get transaction by ID with ownership validation
 // Tujuan: Mengambil transaksi berdasarkan ID dengan validasi kepemilikan
 // Parameter: userID (uuid.UUID), transactionID (uuid.UUID)
-// Return: (*models.Transaction, error) - data transaksi atau error jika tidak ditemukan
+// Return: (*response.TransactionResponse, error) - data transaksi atau error jika tidak ditemukan
 // Penjelasan: Validasi user ada kemudian ambil transaksi yang dimiliki user
-func (s *TransactionService) GetTransactionByID(userID uuid.UUID, transactionID uuid.UUID) (*models.Transaction, error) {
+func (s *TransactionService) GetTransactionByID(userID uuid.UUID, transactionID uuid.UUID) (*response.TransactionResponse, error) {
 	// Validate user exists
 	_, err := s.UserRepo.FindByID(userID)
 	if err != nil {
@@ -116,15 +129,28 @@ func (s *TransactionService) GetTransactionByID(userID uuid.UUID, transactionID 
 		return nil, err
 	}
 
-	return transaction, nil
+	// Convert to response format
+	res := &response.TransactionResponse{
+		ID:             transaction.ID,
+		UserID:         transaction.UserID,
+		Type:           transaction.Type,
+		Amount:         float64(transaction.Amount),
+		Description:    transaction.Description,
+		Photo:          transaction.Photo,
+		Date:           transaction.Date,
+		BudgetCategory: transaction.BudgetCategory,
+		CreatedAt:      transaction.CreatedAt,
+	}
+
+	return res, nil
 }
 
 // UpdateTransaction - Updates existing transaction
 // Tujuan: Mengupdate transaksi yang sudah ada dengan validasi kepemilikan, termasuk photo update
 // Parameter: userID (uuid.UUID), transactionID (uuid.UUID), req (*request.TransactionUpdateRequest), photoPath (string)
-// Return: (*models.Transaction, error) - transaksi yang diupdate atau error jika gagal
+// Return: (*response.TransactionResponse, error) - transaksi yang diupdate atau error jika gagal
 // Penjelasan: Validasi user dan transaksi ada, upload photo baru jika ada, kemudian update dengan data baru yang diberikan
-func (s *TransactionService) UpdateTransaction(userID uuid.UUID, transactionID uuid.UUID, req *request.TransactionUpdateRequest, photoPath string) (*models.Transaction, error) {
+func (s *TransactionService) UpdateTransaction(userID uuid.UUID, transactionID uuid.UUID, req *request.TransactionUpdateRequest, photoPath string) (*response.TransactionResponse, error) {
 	// Validate user exists
 	_, err := s.UserRepo.FindByID(userID)
 	if err != nil {
@@ -146,7 +172,7 @@ func (s *TransactionService) UpdateTransaction(userID uuid.UUID, transactionID u
 		if existingTransaction.Photo != nil {
 			oldPhotoKey := s.extractKeyFromURL(*existingTransaction.Photo)
 			if oldPhotoKey != "" {
-				s.R2Client.DeleteFile(oldPhotoKey) 
+				s.R2Client.DeleteFile(oldPhotoKey)
 			}
 		}
 
@@ -157,7 +183,25 @@ func (s *TransactionService) UpdateTransaction(userID uuid.UUID, transactionID u
 		}
 	}
 
-	return s.TransactionRepo.EditTransaction(userID, transactionID, req)
+	updatedTransaction, err := s.TransactionRepo.EditTransaction(userID, transactionID, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to response format
+	res := &response.TransactionResponse{
+		ID:             updatedTransaction.ID,
+		UserID:         updatedTransaction.UserID,
+		Type:           updatedTransaction.Type,
+		Amount:         float64(updatedTransaction.Amount),
+		Description:    updatedTransaction.Description,
+		Photo:          updatedTransaction.Photo,
+		Date:           updatedTransaction.Date,
+		BudgetCategory: updatedTransaction.BudgetCategory,
+		CreatedAt:      updatedTransaction.CreatedAt,
+	}
+
+	return res, nil
 }
 
 // DeleteTransaction - Deletes a transaction and its photo
@@ -192,9 +236,9 @@ func (s *TransactionService) DeleteTransaction(userID uuid.UUID, transactionID u
 // GetAllUserTransactions - Retrieves all transactions for a user
 // Tujuan: Mengambil semua transaksi milik user dengan urutan terbaru
 // Parameter: userID (uuid.UUID)
-// Return: ([]models.Transaction, error) - daftar transaksi atau error jika gagal
+// Return: ([]response.TransactionResponse, error) - daftar transaksi atau error jika gagal
 // Penjelasan: Validasi user ada kemudian ambil semua transaksi dari repository
-func (s *TransactionService) GetAllUserTransactions(userID uuid.UUID) ([]models.Transaction, error) {
+func (s *TransactionService) GetAllUserTransactions(userID uuid.UUID) ([]response.TransactionResponse, error) {
 	// Validate user exists
 	_, err := s.UserRepo.FindByID(userID)
 	if err != nil {
@@ -204,12 +248,34 @@ func (s *TransactionService) GetAllUserTransactions(userID uuid.UUID) ([]models.
 		return nil, err
 	}
 
-	return s.TransactionRepo.GetAllUserTransaction(userID)
+	transactions, err := s.TransactionRepo.GetAllUserTransaction(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to response format
+	var responses []response.TransactionResponse
+	for _, transaction := range transactions {
+		res := response.TransactionResponse{
+			ID:             transaction.ID,
+			UserID:         transaction.UserID,
+			Type:           transaction.Type,
+			Amount:         float64(transaction.Amount),
+			Description:    transaction.Description,
+			Photo:          transaction.Photo,
+			Date:           transaction.Date,
+			BudgetCategory: transaction.BudgetCategory,
+			CreatedAt:      transaction.CreatedAt,
+		}
+		responses = append(responses, res)
+	}
+
+	return responses, nil
 }
 
 // GetTransactionsByPeriod - Retrieves transactions grouped by period
 // Tujuan: Mengambil transaksi yang dikelompokkan berdasarkan periode waktu tertentu
-// Parameter: userID (uuid.UUID), periodType (models.PeriodType), startDate (time.Time), endDate (time.Time)
+// Parameter: userID (uuid.UUID), periodType (models.PeriodType)
 // Return: (*response.GetAllTransactionByPeriodResponse, error) - data transaksi berdasarkan periode atau error
 // Penjelasan: Validasi user dan periode kemudian ambil transaksi dengan grouping berdasarkan periode
 func (s *TransactionService) GetTransactionsByPeriod(

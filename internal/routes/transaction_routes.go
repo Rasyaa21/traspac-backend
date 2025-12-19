@@ -30,7 +30,7 @@ func TransactionRoutes(api *gin.RouterGroup, db *gorm.DB) {
 	transactionController := controllers.NewTransactionController(transactionService)
 
 	{
-		transactionGroup.Use(middleware.AuthMiddleware())
+		transactionGroup.Use(middleware.AuthMiddleware(), middleware.RequireEmailVerified())
 		{
 			transactionGroup.POST("", transactionController.CreateTransaction)                // Create transaction with photo
 			transactionGroup.GET("", transactionController.GetAllTransactions)               // Get all user transactions

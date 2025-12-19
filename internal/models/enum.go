@@ -23,15 +23,6 @@ const (
 	PeriodDaily PeriodType = "daily"
 )
 
-type AiAnalysisType string
-
-const (
-	AiWeeklySummary    AiAnalysisType = "weekly_summary"
-	AiMonthlySummary   AiAnalysisType = "monthly_summary"
-	AiYearlySummary    AiAnalysisType = "yearly_summary"
-	AiComparePeriod    AiAnalysisType = "compare_period"
-	AiBudgetEvaluation AiAnalysisType = "budget_evaluation"
-)
 
 type TokenType string
 
