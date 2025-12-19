@@ -19,6 +19,7 @@ type Claims struct {
     UserID uuid.UUID `json:"user_id"`
     Email  string    `json:"email"`
     Name   string    `json:"name"`
+    VerifiedEmail bool `'json:"verified_email"`
     jwt.RegisteredClaims
 }
 
@@ -52,12 +53,13 @@ func GenerateAccessToken(user *models.User) (string, error) {
         return "", errors.New("JWT_SECRET not set")
     }
 
-    expireTime := time.Now().Add(24 * time.Hour) // 24 hours for access token
+    expireTime := time.Now().Add(24 * time.Hour)
 
     claims := Claims{
         UserID: user.ID,
         Email:  user.Email,
         Name:   user.Name,
+        VerifiedEmail: user.IsEmailVerified,
         RegisteredClaims: jwt.RegisteredClaims{
             ExpiresAt: jwt.NewNumericDate(expireTime),
             IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -186,6 +188,8 @@ func GetUserNameFromContext(c *gin.Context) (string, error) {
 
 func GetUserIDFromContext(c *gin.Context) (uuid.UUID, error) {
     userID, exists := c.Get("user_id")
+
+
     if !exists {
         return uuid.Nil, errors.New("user not authenticated")
     }
@@ -196,4 +200,18 @@ func GetUserIDFromContext(c *gin.Context) (uuid.UUID, error) {
     }
 
     return id, nil
+}
+
+func IsEmailVerifiedFromContext(c *gin.Context) (bool, error) {
+    value, exist := c.Get("verified_email")
+    if !exist {
+        return false, errors.New("email verification status missing")
+    }
+
+    isVerified, ok := value.(bool)
+    if !ok {
+		return false, errors.New("invalid email_verified type")
+	}
+
+	return isVerified, nil
 }

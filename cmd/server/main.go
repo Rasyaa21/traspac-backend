@@ -163,7 +163,6 @@ func main() {
 	log.Printf("🔗 Health check: http://localhost:%s/health", port)
 	log.Printf("🔗 DB Health check: http://localhost:%s/health/db", port)
 	log.Printf("📚 Swagger docs: http://localhost:%s/swagger/index.html", port)
-	log.Printf("🔍 OCR endpoint: http://localhost:%s/api/v1/ocr/raw-text", port)
 
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("❌ Failed to run server: %v", err)

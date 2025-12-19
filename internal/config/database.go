@@ -151,16 +151,6 @@ func setupExtensionsAndEnums(db *gorm.DB) error {
 			values: []string{"weekly", "monthly"},
 		},
 		{
-			name: "ai_analysis_type_enum",
-			values: []string{
-				"weekly_summary",
-				"monthly_summary",
-				"yearly_summary",
-				"compare_period",
-				"budget_evaluation",
-			},
-		},
-		{
 			name:   "token_type_enum",
 			values: []string{"email_verification", "password_reset", "two_factor"},
 		},
@@ -260,27 +250,12 @@ func createCustomIndexes(db *gorm.DB) error {
 			table: "period_reports",
 			query: "CREATE INDEX IF NOT EXISTS idx_period_reports_user_period ON period_reports(user_id, period_start, period_end)",
 		},
-		{
-			name:  "idx_period_reports_user_type",
-			table: "period_reports",
-			query: "CREATE INDEX IF NOT EXISTS idx_period_reports_user_type ON period_reports(user_id, period_type)",
-		},
 
 		// AI Logs indexes
 		{
 			name:  "idx_ai_logs_user_created_at",
 			table: "ai_logs",
 			query: "CREATE INDEX IF NOT EXISTS idx_ai_logs_user_created_at ON ai_logs(user_id, created_at DESC)",
-		},
-		{
-			name:  "idx_ai_logs_user_analysis_type",
-			table: "ai_logs",
-			query: "CREATE INDEX IF NOT EXISTS idx_ai_logs_user_analysis_type ON ai_logs(user_id, analysis_type, created_at DESC)",
-		},
-		{
-			name:  "idx_ai_logs_transaction_id",
-			table: "ai_logs",
-			query: "CREATE INDEX IF NOT EXISTS idx_ai_logs_transaction_id ON ai_logs(transaction_id)",
 		},
 
 		// User Tokens indexes

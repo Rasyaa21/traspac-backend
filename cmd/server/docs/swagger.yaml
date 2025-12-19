@@ -532,17 +532,17 @@ paths:
       summary: Get detailed budget summary with usage
       tags:
       - Budget Management
-  /ocr/raw-text:
-    post:
+  /reports/{id}:
+    get:
       consumes:
-      - multipart/form-data
-      description: Extract raw text from image using OCR (Tesseract)
+      - application/json
+      description: Get specific period report by report ID for the authenticated user
       parameters:
-      - description: Image file (png/jpg/jpeg)
-        in: formData
-        name: image
+      - description: Report ID (UUID)
+        in: path
+        name: id
         required: true
-        type: file
+        type: string
       produces:
       - application/json
       responses:
@@ -556,14 +556,98 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
         "500":
           description: Internal Server Error
           schema:
             additionalProperties: true
             type: object
-      summary: OCR image to raw text
+      security:
+      - BearerAuth: []
+      summary: Get user report by ID
       tags:
-      - OCR
+      - Period Report
+  /reports/period:
+    post:
+      consumes:
+      - application/json
+      description: Generate period report for user within date range
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create period report
+      tags:
+      - Period Report
+  /reports/user:
+    get:
+      consumes:
+      - application/json
+      description: Get all period reports for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all user reports
+      tags:
+      - Period Report
   /transactions:
     get:
       consumes:
@@ -609,7 +693,7 @@ paths:
         in: formData
         name: description
         type: string
-      - description: Transaction date (YYYY-MM-DDTHH:MM:SSZ format)
+      - description: Transaction date (YYYY-MM-DD format)
         in: formData
         name: date
         required: true
@@ -746,7 +830,7 @@ paths:
         in: formData
         name: description
         type: string
-      - description: Transaction date (YYYY-MM-DDTHH:MM:SSZ format)
+      - description: Transaction date (YYYY-MM-DD format)
         in: formData
         name: date
         type: string

@@ -632,25 +632,37 @@ const docTemplate = `{
                 }
             }
         },
-        "/ocr/raw-text": {
+        "/reports/period": {
             "post": {
-                "description": "Extract raw text from image using OCR (Tesseract)",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Generate period report for user within date range",
                 "consumes": [
-                    "multipart/form-data"
+                    "application/json"
                 ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "OCR"
+                    "Period Report"
                 ],
-                "summary": "OCR image to raw text",
+                "summary": "Create period report",
                 "parameters": [
                     {
-                        "type": "file",
-                        "description": "Image file (png/jpg/jpeg)",
-                        "name": "image",
-                        "in": "formData",
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "end_date",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -664,6 +676,122 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/user": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get all period reports for the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Period Report"
+                ],
+                "summary": "Get all user reports",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get specific period report by report ID for the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Period Report"
+                ],
+                "summary": "Get user report by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Report ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -756,7 +884,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Transaction date (YYYY-MM-DDTHH:MM:SSZ format)",
+                        "description": "Transaction date (YYYY-MM-DD format)",
                         "name": "date",
                         "in": "formData",
                         "required": true
@@ -964,7 +1092,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Transaction date (YYYY-MM-DDTHH:MM:SSZ format)",
+                        "description": "Transaction date (YYYY-MM-DD format)",
                         "name": "date",
                         "in": "formData"
                     },

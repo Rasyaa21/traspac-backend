@@ -10,4 +10,5 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB) {
 	SetupUserRoutes(api, db)
 	UserBudgetRoutes(api, db)
 	TransactionRoutes(api, db)
+	PeriodReportRoutes(api, db)
 }
